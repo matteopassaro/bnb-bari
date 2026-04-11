@@ -1,0 +1,214 @@
+{
+  "meta": {
+    "title": "B&B Corte del Borgo Antico | Charming Stay in Bari Vecchia",
+    "description": "Experience the authenticity of Bari Vecchia at Corte del Borgo Antico. Elegant stone rooms just 200m from the Cathedral. Book your charming stay."
+  },
+  "hero": {
+    "imageAlt": "Aerial view of Bari, Puglia",
+    "eyebrow": "B&B Corte del Borgo Antico",
+    "titleTop": "Explore Bari",
+    "titleBottom": "While Staying in Comfort",
+    "quote": "Just 200 meters from Castello Svevo, within the walls of Bari's Old Town."
+  },
+  "about": {
+    "eyebrow": "Our Story",
+    "titleTop": "In the beating heart",
+    "titleBottom": "of Bari's history",
+    "paragraphOne": "Corte del Borgo Antico is a welcoming B&B in the heart of Bari Vecchia, just a short walk from Castello Svevo and the main attractions of the historic center. Its strategic location lets you fully experience the city's authentic atmosphere.",
+    "paragraphTwo": "The interiors are comfortable and carefully curated, with wooden ceilings that add warmth and a fully equipped kitchen for maximum independence. An ideal solution for a practical and relaxing stay in central Bari.",
+    "distanceLabel": "From Castello Svevo",
+    "scoreLabel": "Booking.com score",
+    "imageAlt": "Stone architecture detail"
+  },
+  "roomsData": {
+    "camera-tripla-deluxe": {
+      "name": "Deluxe Triple Room",
+      "description": "Elegant room with exposed stone walls and vaulted ceilings. An authentic atmosphere in the heart of Bari Vecchia."
+    },
+    "camera-matrimoniale": {
+      "name": "Standard Double Room",
+      "description": "A cozy retreat with local stone finishes. Ideal for immersing yourself in the calm of the old town."
+    },
+    "monolocale-pietra": {
+      "name": "Stone Studio",
+      "description": "Independent suite shaped by traditional Apulian architecture. Modern comfort wrapped in a historic shell."
+    }
+  },
+  "roomAmenities": {
+    "wifi": "Wi-Fi",
+    "airConditioning": "Air conditioning",
+    "soundproofing": "Soundproofing",
+    "coffeeMachine": "Coffee machine",
+    "smartTv": "Smart TV",
+    "kettle": "Kettle",
+    "kitchenArea": "Kitchen area"
+  },
+  "roomsSection": {
+    "eyebrow": "Our rooms",
+    "title": "Comfort and tradition"
+  },
+  "offers": {
+    "eyebrow": "Current offers",
+    "title": "The best for you",
+    "cta": "Discover more →",
+    "items": {
+      "bestPrice": {
+        "title": "Best Direct Rate",
+        "description": "Book directly on our site to secure the lowest rate compared to major booking portals.",
+        "badge": "Exclusive"
+      },
+      "oldTown": {
+        "title": "Live the Old Town",
+        "description": "Stay in the Studio and receive an exclusive guide to the hidden gems of Bari Vecchia.",
+        "badge": "Insider"
+      },
+      "longStay": {
+        "title": "Long Stay Discount",
+        "description": "Get 10% off stays longer than 4 nights. Discover Puglia at your own pace.",
+        "badge": "-10%"
+      }
+    }
+  },
+  "reviews": {
+    "eyebrow": "What guests say about us",
+    "title": "The voice of our guests",
+    "averageLabel": "Average score",
+    "averageScore": "8.8 / 10 Excellent",
+    "items": {
+      "alice": {
+        "author": "Alice Moras",
+        "text": "An unforgettable stay! The attention to detail in the room and the location in the heart of Bari Vecchia are priceless.",
+        "date": "October 2023"
+      },
+      "marco": {
+        "author": "Marco Rossi",
+        "text": "The exposed stone walls and wooden ceiling create an incredible sense of peace. Spotless cleanliness and wonderful hospitality.",
+        "date": "September 2023"
+      },
+      "elena": {
+        "author": "Elena S.",
+        "text": "Perfect location for exploring the city. Just steps from San Nicola and Castello Svevo. Highly recommended!",
+        "date": "August 2023"
+      }
+    }
+  },
+  "location": {
+    "eyebrow": "Where we are",
+    "titleTop": "In the beating heart",
+    "titleBottom": "of Bari Vecchia",
+    "addressTitle": "Address",
+    "directionsTitle": "How to reach us from Castello Svevo",
+    "steps": {
+      "one": "Leave the majestic Castello Svevo behind you and cross Piazza Federico II di Svevia toward the old town.",
+      "two": "Enter the heart of the borgo through the alleys leading to the Cathedral of San Sabino.",
+      "three": "Once you reach the Cathedral square, continue east into the quieter narrow streets until you reach Strada Attolini.",
+      "four": "Corte Morgese is right at the corner, a peaceful oasis preserved by time."
+    }
+  },
+  "explore": {
+    "eyebrow": "Explore the surroundings",
+    "title": "Bari and Puglia",
+    "places": {
+      "cathedral": {
+        "name": "Bari Cathedral",
+        "distance": "200 meters",
+        "description": "Just a short walk from your room, admire the monumental rose window lighting up the Romanesque facade."
+      },
+      "basilica": {
+        "name": "Basilica of Saint Nicholas",
+        "distance": "400 meters",
+        "description": "The Mediterranean's most famous pilgrimage destination, home to the saint's relics."
+      },
+      "castle": {
+        "name": "Castello Svevo",
+        "distance": "200 meters",
+        "description": "The majestic Norman-Swabian fortress marking the entrance to the old town."
+      },
+      "orecchiette": {
+        "name": "Orecchiette Street",
+        "distance": "300 meters",
+        "description": "Arco Basso, where Bari's women still make pasta by hand right before your eyes."
+      },
+      "seafront": {
+        "name": "Seafront and harbor",
+        "distance": "600 meters",
+        "description": "The embrace of Bari's sea for a sunset stroll or a boat trip."
+      },
+      "airport": {
+        "name": "Bari Airport",
+        "distance": "20 min",
+        "description": "Easily reachable with our private transfer service on request."
+      }
+    }
+  },
+  "faq": {
+    "eyebrow": "Useful information",
+    "title": "Frequently Asked Questions",
+    "items": {
+      "parking": {
+        "question": "Where can I park my car?",
+        "answer": "Corte Morgese is located in a limited traffic zone (ZTL). The nearest and most convenient parking area is along Lungomare Imperatore Augusto, just a 5-minute walk away. You can unload your luggage nearby before parking."
+      },
+      "safety": {
+        "question": "Is the neighborhood safe in the evening?",
+        "answer": "Absolutely. Bari Vecchia is now the city's vibrant tourist heart, lively and well-monitored, with families and visitors filling its streets late into the night thanks to its many excellent bars and restaurants."
+      },
+      "lateCheckin": {
+        "question": "Is late check-in available?",
+        "answer": "Certainly. We use an express check-in system with private codes, allowing you to access the property independently at any time, without waiting for anyone to hand over the keys."
+      },
+      "breakfast": {
+        "question": "Do you offer a typical Bari breakfast?",
+        "answer": "The property offers accommodations equipped with an independent kitchen. However, we are literally 50 meters from the neighborhood's most authentic historic bars, and we will happily show you where to enjoy the best cornetto or freshly baked focaccia barese."
+      },
+      "luggage": {
+        "question": "Can I leave my luggage before check-in?",
+        "answer": "Yes, we have secure luggage storage inside the Corte. You can leave your bags with us in the morning and begin exploring Bari hands-free right away."
+      }
+    }
+  },
+  "roomsPage": {
+    "eyebrow": "Your retreat in the heart of Bari",
+    "title": "Our Rooms",
+    "description": "Each room is one of a kind, carefully furnished to give you an unforgettable stay between white stone walls and the blue of the sea.",
+    "includedComforts": "Included comforts",
+    "quote": "Staying in these rooms feels like diving into Puglia's past, but with every modern comfort."
+  },
+  "roomDetail": {
+    "backToRooms": "All rooms",
+    "retreatTitle": "A refuge between history and sea",
+    "storyParagraphOne": "Located in the beating heart of <strong>Bari's historic center</strong>, the elegant <strong>{{roomName}}</strong> at Corte del Borgo Antico offers an authentic stay in air-conditioned spaces with a private entrance and <strong>free WiFi</strong>. The Basilica of Saint Nicholas is only 200 meters away.",
+    "storyParagraphTwo": "Bari's old town is watched over by the majestic <strong>Norman-Swabian castle</strong>, surrounded by its defensive moat and winding alleys tracing the city's circular layout. During your stay, do not miss the sumptuous <strong>Basilica of Saint Nicholas</strong> and the <strong>Cathedral of San Sabino</strong>.",
+    "storyParagraphThree": "The streets here are full of <strong>restaurants, pizzerias, and cafes</strong>. If you want to explore beyond the sea, ferries depart from the harbor 600 meters away, while the airport is just a 20-minute drive.",
+    "exploreOther": "Explore other options",
+    "whatsappInfo": "Info on WhatsApp",
+    "amenitiesTitle": "Included Services and Benefits",
+    "amenitiesSubtitle": "Expand to see the full list of comforts",
+    "spokenLanguagesList": "Italian, English, Spanish",
+    "stats": {
+      "sanNicola": "San Nicola",
+      "castle": "Castello Svevo",
+      "port": "Bari Harbor",
+      "airport": "Airport"
+    },
+    "pricePrefix": "from",
+    "couplesScore": "Couples: 8.8/10"
+  },
+  "roomDetailAmenities": {
+    "privateBathroom": "Private bathroom",
+    "airConditioning": "Air conditioning",
+    "freeWifi": "Free WiFi",
+    "flatScreenTv": "Flat-screen TV",
+    "view": "View",
+    "shower": "Shower",
+    "elevator": "Elevator",
+    "electricKettle": "Electric kettle",
+    "fridge": "Fridge",
+    "oven": "Oven",
+    "inductionKitchen": "Induction kitchen",
+    "invoiceAvailable": "Invoice available",
+    "privateCheckin": "Private check-in/out",
+    "luggageStorage": "Luggage storage",
+    "expressCheckin": "Express check-in"
+  }
+}

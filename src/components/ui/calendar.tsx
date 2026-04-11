@@ -5,13 +5,25 @@ import { DayPicker } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 
-export type CalendarProps = React.ComponentProps<typeof DayPicker>;
+export type CalendarProps = React.ComponentProps<typeof DayPicker> & {
+  blockedDates?: Date[];
+};
 
-function Calendar({ className, classNames, showOutsideDays = true, ...props }: CalendarProps) {
+function Calendar({ className, classNames, showOutsideDays = true, blockedDates, ...props }: CalendarProps) {
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
       className={cn("p-3", className)}
+      disabled={[
+        ...(Array.isArray(props.disabled) ? props.disabled : props.disabled ? [props.disabled] : []),
+        ...(blockedDates || [])
+      ]}
+      modifiers={{
+        blocked: blockedDates || [],
+      }}
+      modifiersClassNames={{
+        blocked: "bg-red-100 text-red-900 line-through opacity-70",
+      }}
       classNames={{
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-4",

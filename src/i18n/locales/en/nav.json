@@ -1,0 +1,17 @@
+{
+  "brand": "Corte del Borgo Antico",
+  "links": {
+    "home": "Home",
+    "rooms": "Rooms",
+    "location": "Location",
+    "explore": "Explore Bari"
+  },
+  "cta": {
+    "bookNow": "Book now"
+  },
+  "languageSwitcher": {
+    "ariaLabel": "Select language",
+    "it": "IT",
+    "en": "EN"
+  }
+}

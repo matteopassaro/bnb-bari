@@ -1,47 +1,69 @@
-import room1 from "@/assets/room-1.jpg";
+import room1_entrance from "@/assets/room1_entrance.jpg";
+import room1_entrance_2 from "@/assets/room1_entrance_2.jpg";
+import room1_0 from "@/assets/room1_0.jpg";
+import room1_2 from "@/assets/room1_2.jpg";
+import room1_3 from "@/assets/room1_3.jpg";
+import room1_4 from "@/assets/room1_4.jpg";
+import room1_5 from "@/assets/room1_5.jpg";
+import room1_6 from "@/assets/room1_6.jpg";
+import room1_bathroom from "@/assets/room1_bathroom.jpg";
+import room1_bathroom_2 from "@/assets/room1_bathroom_2.jpg";
+
 import room2 from "@/assets/room-2.jpg";
 import room3 from "@/assets/room-3.jpg";
 
 export interface Room {
   id: string;
-  name: string;
-  description: string;
   price: number;
-  image: string;
+  images: string[];
   guests: number;
   size: string;
-  amenities: string[];
+  amenities: RoomAmenityKey[];
 }
+
+export type RoomAmenityKey =
+  | "wifi"
+  | "airConditioning"
+  | "soundproofing"
+  | "coffeeMachine"
+  | "smartTv"
+  | "kettle"
+  | "kitchenArea";
 
 export const rooms: Room[] = [
   {
-    id: "camera-sole",
-    name: "Camera del Sole",
-    description: "Camera luminosa con pavimento in cotto e finestra ad arco con vista mare. Ideale per coppie in cerca di tranquillità.",
-    price: 85,
-    image: room1,
-    guests: 2,
-    size: "22 mq",
-    amenities: ["Wi-Fi", "Aria condizionata", "Vista mare", "Colazione inclusa"],
-  },
-  {
-    id: "camera-cielo",
-    name: "Camera del Cielo",
-    description: "Ampia camera con accenti azzurri, soffitto con travi a vista e balcone privato con vista sulla città vecchia.",
+    id: "camera-tripla-deluxe",
     price: 95,
-    image: room2,
-    guests: 2,
-    size: "26 mq",
-    amenities: ["Wi-Fi", "Aria condizionata", "Balcone", "Colazione inclusa", "TV"],
+    images: [
+      room1_0,
+      room1_entrance,
+      room1_entrance_2,
+      room1_2,
+      room1_3,
+      room1_4,
+      room1_5,
+      room1_6,
+      room1_bathroom,
+      room1_bathroom_2
+    ],
+    guests: 3,
+    size: "18 m²",
+    amenities: ["wifi", "airConditioning", "soundproofing", "coffeeMachine"],
   },
   {
-    id: "suite-ulivo",
-    name: "Suite dell'Ulivo",
-    description: "Suite romantica con pareti in pietra, letto a baldacchino e atmosfera intima. La nostra camera più esclusiva.",
-    price: 130,
-    image: room3,
+    id: "camera-matrimoniale",
+    price: 85,
+    images: [room2],
     guests: 2,
-    size: "32 mq",
-    amenities: ["Wi-Fi", "Aria condizionata", "Minibar", "Colazione inclusa", "Accappatoi"],
+    size: "15 m²",
+    amenities: ["wifi", "airConditioning", "smartTv", "kettle"],
+  },
+  {
+    id: "monolocale-pietra",
+    price: 110,
+    images: [room3],
+    guests: 2,
+    size: "25 m²",
+    amenities: ["wifi", "kitchenArea", "airConditioning", "smartTv"],
   },
 ];

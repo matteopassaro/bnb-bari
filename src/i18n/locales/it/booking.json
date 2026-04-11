@@ -1,0 +1,45 @@
+{
+  "page": {
+    "eyebrow": "Prenotazione",
+    "title": "Prenota il tuo soggiorno",
+    "dateAndRoom": "Date e camera",
+    "yourDetails": "I tuoi dati",
+    "summary": "Riepilogo"
+  },
+  "placeholders": {
+    "selectRoom": "Scegli camera",
+    "fullNameExample": "Mario Rossi",
+    "emailExample": "mario@email.com",
+    "phoneExample": "+39 333 123 4567",
+    "notesExample": "Orario di arrivo, allergie alimentari, ecc.",
+    "nameAndSurname": "Nome e Cognome",
+    "emailAddress": "Indirizzo Email"
+  },
+  "messages": {
+    "securePayment": "Pagamento sicuro con Stripe. Nessun costo nascosto.",
+    "sessionId": "ID Sessione",
+    "roomOption": "{{roomName}} — €{{price}}/notte",
+    "priceBreakdown_one": "€{{price}} × {{count}} notte",
+    "priceBreakdown_other": "€{{price}} × {{count}} notti",
+    "staySummary_one": "Soggiorno ({{count}} n.)",
+    "staySummary_other": "Soggiorno ({{count}} n.)"
+  },
+  "toasts": {
+    "requiredFields": "Compila tutti i campi obbligatori",
+    "invalidDates": "Le date selezionate non sono valide",
+    "datesJustBooked": "Spiacenti, le date selezionate sono state appena occupate.",
+    "sessionError": "Impossibile creare la sessione di pagamento",
+    "requestError": "Errore durante l'invio della richiesta. Riprova più tardi.",
+    "checkoutError": "Errore nell'invio. Riprova più tardi."
+  },
+  "confirmation": {
+    "metaTitle": "Prenotazione Confermata | Corte del Borgo Antico",
+    "title": "Prenotazione confermata!",
+    "description": "Grazie per aver scelto Corte del Borgo Antico. Abbiamo inviato la ricevuta e i dettagli del check-in al tuo indirizzo email.",
+    "nextSteps": "Prossimi passi",
+    "checkEmailTitle": "Controlla l'email",
+    "checkEmailDescription": "Riceverai i codici per il check-in express 24 ore prima del tuo arrivo.",
+    "planTripTitle": "Pianifica il viaggio",
+    "planTripDescription": "Siamo nel cuore di Bari Vecchia. Trovi le indicazioni stradali fornite nell'email di conferma."
+  }
+}

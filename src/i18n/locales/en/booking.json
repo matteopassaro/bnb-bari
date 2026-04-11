@@ -1,0 +1,45 @@
+{
+  "page": {
+    "eyebrow": "Booking",
+    "title": "Book your stay",
+    "dateAndRoom": "Dates and room",
+    "yourDetails": "Your details",
+    "summary": "Summary"
+  },
+  "placeholders": {
+    "selectRoom": "Choose room",
+    "fullNameExample": "Mario Rossi",
+    "emailExample": "mario@email.com",
+    "phoneExample": "+39 333 123 4567",
+    "notesExample": "Arrival time, food allergies, etc.",
+    "nameAndSurname": "Full name",
+    "emailAddress": "Email address"
+  },
+  "messages": {
+    "securePayment": "Secure payment with Stripe. No hidden fees.",
+    "sessionId": "Session ID",
+    "roomOption": "{{roomName}} — €{{price}}/night",
+    "priceBreakdown_one": "€{{price}} × {{count}} night",
+    "priceBreakdown_other": "€{{price}} × {{count}} nights",
+    "staySummary_one": "Stay ({{count}} night)",
+    "staySummary_other": "Stay ({{count}} nights)"
+  },
+  "toasts": {
+    "requiredFields": "Please fill in all required fields",
+    "invalidDates": "The selected dates are not valid",
+    "datesJustBooked": "Sorry, the selected dates have just been booked.",
+    "sessionError": "Unable to create the payment session",
+    "requestError": "Error while sending the request. Please try again later.",
+    "checkoutError": "Error while submitting. Please try again later."
+  },
+  "confirmation": {
+    "metaTitle": "Booking Confirmed | Corte del Borgo Antico",
+    "title": "Booking confirmed!",
+    "description": "Thank you for choosing Corte del Borgo Antico. We have sent the receipt and check-in details to your email address.",
+    "nextSteps": "Next steps",
+    "checkEmailTitle": "Check your email",
+    "checkEmailDescription": "You will receive your express check-in codes 24 hours before arrival.",
+    "planTripTitle": "Plan your trip",
+    "planTripDescription": "We are in the heart of Bari Vecchia. You will find the directions in your confirmation email."
+  }
+}
