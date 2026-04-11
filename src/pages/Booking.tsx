@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { format, differenceInDays } from "date-fns";
-import { CalendarIcon, Users } from "lucide-react";
+import { it } from "date-fns/locale";
+import { CalendarIcon, Users, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -18,13 +19,9 @@ import { supabase } from "@/lib/supabase";
 import FadeIn from "@/components/FadeIn";
 
 import { useAvailability } from "@/hooks/useAvailability";
-import { useTranslation } from "react-i18next";
-import { getDateLocale } from "@/i18n/config";
 
 const Booking = () => {
-  const { t, i18n } = useTranslation(["booking", "common", "home"]);
   const [searchParams] = useSearchParams();
-  const dateLocale = getDateLocale(i18n.resolvedLanguage);
 
   const [checkIn, setCheckIn] = useState<Date | undefined>(
     searchParams.get("checkin") ? new Date(searchParams.get("checkin")!) : undefined
@@ -49,16 +46,15 @@ const Booking = () => {
 
   const selectedRoomData = rooms.find((r) => r.id === selectedRoom);
   const total = selectedRoomData ? selectedRoomData.price * nights : 0;
-  const selectedRoomName = selectedRoomData ? t(`roomsData.${selectedRoomData.id}.name`, { ns: "home" }) : "";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!checkIn || !checkOut || !selectedRoom || !name || !email) {
-      toast.error(t("booking:toasts.requiredFields"));
+      toast.error("Compila tutti i campi obbligatori");
       return;
     }
     if (nights <= 0) {
-      toast.error(t("booking:toasts.invalidDates"));
+      toast.error("Le date selezionate non sono valide");
       return;
     }
 
@@ -70,7 +66,7 @@ const Booking = () => {
       const { data, error: invokeError } = await supabase.functions.invoke('create-checkout-session', {
         body: {
           room_id: selectedRoom,
-          room_name: selectedRoomName,
+          room_name: selectedRoomData?.name,
           check_in: format(checkIn, "yyyy-MM-dd"),
           check_out: format(checkOut, "yyyy-MM-dd"),
           guests: parseInt(guests),
@@ -87,7 +83,7 @@ const Booking = () => {
       const { session_url, error: edgeError } = data || {};
       if (edgeError) {
         if (edgeError === "Dates already booked") {
-           toast.error(t("booking:toasts.datesJustBooked"));
+           toast.error("Spiacenti, le date selezionate sono state appena occupate.");
         } else {
            throw new Error(edgeError);
         }
@@ -97,11 +93,11 @@ const Booking = () => {
       if (session_url) {
         window.location.href = session_url;
       } else {
-        throw new Error(t("booking:toasts.sessionError"));
+        throw new Error("Impossibile creare la sessione di pagamento");
       }
     } catch (error: any) {
       console.error("Errore durante la prenotazione:", error);
-      toast.error(t("booking:toasts.requestError"));
+      toast.error("Errore durante l'invio della richiesta. Riprova più tardi.");
     } finally {
       setIsSubmitting(false);
     }
@@ -116,10 +112,10 @@ const Booking = () => {
           <div className="text-center mb-12">
             <FadeIn direction="up">
               <p className="text-primary text-sm uppercase tracking-[0.2em] font-sans font-medium mb-3">
-                {t("booking:page.eyebrow")}
+                Prenotazione
               </p>
               <h1 className="text-3xl md:text-5xl font-serif font-bold text-foreground">
-                {t("booking:page.title")}
+                Prenota il tuo soggiorno
               </h1>
             </FadeIn>
           </div>
@@ -129,34 +125,34 @@ const Booking = () => {
             <div className="lg:col-span-3 space-y-6">
               <FadeIn direction="right" delay={0.1}>
                 <div className="bg-card rounded-2xl border p-6 space-y-5">
-                  <h2 className="font-serif text-lg font-bold text-card-foreground">{t("booking:page.dateAndRoom")}</h2>
+                  <h2 className="font-serif text-lg font-bold text-card-foreground">Date e camera</h2>
 
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>{t("common:labels.checkIn")} *</Label>
+                      <Label>Check-in *</Label>
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !checkIn && "text-muted-foreground")}>
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {checkIn ? format(checkIn, "d MMM yyyy", { locale: dateLocale }) : t("common:labels.selectDate")}
+                            {checkIn ? format(checkIn, "d MMM yyyy", { locale: it }) : "Seleziona data"}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar mode="single" selected={checkIn} onSelect={setCheckIn} disabled={(d) => d < new Date()} blockedDates={blockedDates} locale={dateLocale} initialFocus className="p-3 pointer-events-auto" />
+                          <Calendar mode="single" selected={checkIn} onSelect={setCheckIn} disabled={(d) => d < new Date()} blockedDates={blockedDates} initialFocus className="p-3 pointer-events-auto" />
                         </PopoverContent>
                       </Popover>
                     </div>
                     <div className="space-y-2">
-                      <Label>{t("common:labels.checkOut")} *</Label>
+                      <Label>Check-out *</Label>
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !checkOut && "text-muted-foreground")}>
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {checkOut ? format(checkOut, "d MMM yyyy", { locale: dateLocale }) : t("common:labels.selectDate")}
+                            {checkOut ? format(checkOut, "d MMM yyyy", { locale: it }) : "Seleziona data"}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar mode="single" selected={checkOut} onSelect={setCheckOut} disabled={(d) => d < (checkIn || new Date())} blockedDates={blockedDates} locale={dateLocale} initialFocus className="p-3 pointer-events-auto" />
+                          <Calendar mode="single" selected={checkOut} onSelect={setCheckOut} disabled={(d) => d < (checkIn || new Date())} blockedDates={blockedDates} initialFocus className="p-3 pointer-events-auto" />
                         </PopoverContent>
                       </Popover>
                     </div>
@@ -164,23 +160,23 @@ const Booking = () => {
 
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>{t("common:labels.room")} *</Label>
+                      <Label>Camera *</Label>
                       <Select value={selectedRoom} onValueChange={setSelectedRoom}>
-                        <SelectTrigger><SelectValue placeholder={t("booking:placeholders.selectRoom")} /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder="Scegli camera" /></SelectTrigger>
                         <SelectContent>
                           {rooms.map((r) => (
-                            <SelectItem key={r.id} value={r.id}>{t("booking:messages.roomOption", { roomName: t(`roomsData.${r.id}.name`, { ns: "home" }), price: r.price })}</SelectItem>
+                            <SelectItem key={r.id} value={r.id}>{r.name} — €{r.price}/notte</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>{t("common:labels.guests")}</Label>
+                      <Label>Ospiti</Label>
                       <Select value={guests} onValueChange={setGuests}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {[1, 2, 3, 4].map((n) => (
-                            <SelectItem key={n} value={n.toString()}>{t("common:counts.guests", { count: n })}</SelectItem>
+                            <SelectItem key={n} value={n.toString()}>{n} {n === 1 ? "ospite" : "ospiti"}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -191,24 +187,24 @@ const Booking = () => {
 
               <FadeIn direction="right" delay={0.2}>
                 <div className="bg-card rounded-2xl border p-6 space-y-5">
-                  <h2 className="font-serif text-lg font-bold text-card-foreground">{t("booking:page.yourDetails")}</h2>
+                  <h2 className="font-serif text-lg font-bold text-card-foreground">I tuoi dati</h2>
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>{t("common:labels.fullName")} *</Label>
-                      <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("booking:placeholders.fullNameExample")} required />
+                      <Label>Nome completo *</Label>
+                      <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Mario Rossi" required />
                     </div>
                     <div className="space-y-2">
-                      <Label>{t("common:labels.email")} *</Label>
-                      <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("booking:placeholders.emailExample")} required />
+                      <Label>Email *</Label>
+                      <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="mario@email.com" required />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label>{t("common:labels.phone")}</Label>
-                    <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t("booking:placeholders.phoneExample")} />
+                    <Label>Telefono</Label>
+                    <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+39 333 123 4567" />
                   </div>
                   <div className="space-y-2">
-                    <Label>{t("common:labels.notes")}</Label>
-                    <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("booking:placeholders.notesExample")} rows={3} />
+                    <Label>Note o richieste particolari</Label>
+                    <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Orario di arrivo, allergie alimentari, ecc." rows={3} />
                   </div>
                 </div>
               </FadeIn>
@@ -218,41 +214,41 @@ const Booking = () => {
             <div className="lg:col-span-2">
               <FadeIn direction="left" delay={0.3}>
                 <div className="bg-card rounded-2xl border p-6 sticky top-24 space-y-5">
-                  <h2 className="font-serif text-lg font-bold text-card-foreground">{t("booking:page.summary")}</h2>
+                  <h2 className="font-serif text-lg font-bold text-card-foreground">Riepilogo</h2>
 
                   {selectedRoomData && (
                     <div className="rounded-xl overflow-hidden">
-                      <img src={selectedRoomData.images[0]} alt={selectedRoomName} className="w-full h-36 object-cover" loading="lazy" />
+                      <img src={selectedRoomData.images[0]} alt={selectedRoomData.name} className="w-full h-36 object-cover" loading="lazy" />
                     </div>
                   )}
 
                   <div className="space-y-3 text-sm">
                     {selectedRoomData && (
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">{t("common:labels.room")}</span>
-                        <span className="font-medium text-card-foreground">{selectedRoomName}</span>
+                        <span className="text-muted-foreground">Camera</span>
+                        <span className="font-medium text-card-foreground">{selectedRoomData.name}</span>
                       </div>
                     )}
                     {checkIn && (
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">{t("common:labels.checkIn")}</span>
-                        <span className="font-medium text-card-foreground">{format(checkIn, "d MMM yyyy", { locale: dateLocale })}</span>
+                        <span className="text-muted-foreground">Check-in</span>
+                        <span className="font-medium text-card-foreground">{format(checkIn, "d MMM yyyy", { locale: it })}</span>
                       </div>
                     )}
                     {checkOut && (
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">{t("common:labels.checkOut")}</span>
-                        <span className="font-medium text-card-foreground">{format(checkOut, "d MMM yyyy", { locale: dateLocale })}</span>
+                        <span className="text-muted-foreground">Check-out</span>
+                        <span className="font-medium text-card-foreground">{format(checkOut, "d MMM yyyy", { locale: it })}</span>
                       </div>
                     )}
                     {nights > 0 && (
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">{t("common:labels.duration")}</span>
-                        <span className="font-medium text-card-foreground">{t("common:counts.nights", { count: nights })}</span>
+                        <span className="text-muted-foreground">Durata</span>
+                        <span className="font-medium text-card-foreground">{nights} {nights === 1 ? "notte" : "notti"}</span>
                       </div>
                     )}
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">{t("common:labels.guests")}</span>
+                      <span className="text-muted-foreground">Ospiti</span>
                       <span className="font-medium text-card-foreground flex items-center gap-1"><Users className="h-3 w-3" /> {guests}</span>
                     </div>
                   </div>
@@ -261,22 +257,22 @@ const Booking = () => {
                     <>
                       <div className="border-t pt-4">
                         <div className="flex justify-between text-sm mb-1">
-                          <span className="text-muted-foreground">{t("booking:messages.priceBreakdown", { price: selectedRoomData.price, count: nights })}</span>
+                          <span className="text-muted-foreground">€{selectedRoomData.price} × {nights} notti</span>
                           <span className="font-medium text-card-foreground">€{total}</span>
                         </div>
                       </div>
                       <div className="border-t pt-4 flex justify-between text-lg font-bold">
-                        <span className="text-card-foreground">{t("common:labels.total")}</span>
+                        <span className="text-card-foreground">Totale</span>
                         <span className="text-primary">€{total}</span>
                       </div>
                     </>
                   )}
 
                   <Button type="submit" className="w-full h-12 text-base font-semibold" disabled={isSubmitting}>
-                    {isSubmitting ? t("common:actions.processing") : t("common:actions.bookWithCard")}
+                    {isSubmitting ? "Elaborazione..." : "Prenota con Carta"}
                   </Button>
                   <p className="text-xs text-muted-foreground text-center">
-                    {t("booking:messages.securePayment")}
+                    Pagamento sicuro con Stripe. Nessun costo nascosto.
                   </p>
                 </div>
               </FadeIn>

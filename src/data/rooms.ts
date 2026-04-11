@@ -14,25 +14,20 @@ import room3 from "@/assets/room-3.jpg";
 
 export interface Room {
   id: string;
+  name: string;
+  description: string;
   price: number;
   images: string[];
   guests: number;
   size: string;
-  amenities: RoomAmenityKey[];
+  amenities: string[];
 }
-
-export type RoomAmenityKey =
-  | "wifi"
-  | "airConditioning"
-  | "soundproofing"
-  | "coffeeMachine"
-  | "smartTv"
-  | "kettle"
-  | "kitchenArea";
 
 export const rooms: Room[] = [
   {
     id: "camera-tripla-deluxe",
+    name: "Camera Tripla Deluxe",
+    description: "Elegante camera con pareti in pietra a vista e soffitti a botte. Atmosfera autentica nel cuore di Bari Vecchia.",
     price: 95,
     images: [
       room1_0,
@@ -47,23 +42,27 @@ export const rooms: Room[] = [
       room1_bathroom_2
     ],
     guests: 3,
-    size: "18 m²",
-    amenities: ["wifi", "airConditioning", "soundproofing", "coffeeMachine"],
+    size: "18 mq",
+    amenities: ["Wi-Fi", "Aria condizionata", "Insonorizzazione", "Macchina caffè"],
   },
   {
     id: "camera-matrimoniale",
+    name: "Matrimoniale Standard",
+    description: "Accogliente rifugio con rifiniture in pietra locale. Ideale per immergersi nella quiete del borgo antico.",
     price: 85,
     images: [room2],
     guests: 2,
-    size: "15 m²",
-    amenities: ["wifi", "airConditioning", "smartTv", "kettle"],
+    size: "15 mq",
+    amenities: ["Wi-Fi", "Aria condizionata", "TV Smart", "Bollitore"],
   },
   {
     id: "monolocale-pietra",
+    name: "Monolocale in Pietra",
+    description: "Suite indipendente caratterizzata dall'architettura tipica pugliese. Comfort moderno in un guscio storico.",
     price: 110,
     images: [room3],
     guests: 2,
-    size: "25 m²",
-    amenities: ["wifi", "kitchenArea", "airConditioning", "smartTv"],
+    size: "25 mq",
+    amenities: ["Wi-Fi", "Area cucina", "Aria condizionata", "Smart TV"],
   },
 ];

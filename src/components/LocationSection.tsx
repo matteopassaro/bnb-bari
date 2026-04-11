@@ -1,10 +1,8 @@
 import FadeIn from "./FadeIn";
 import { MapPin, Navigation } from "lucide-react";
-import { useTranslation } from "react-i18next";
 
 const LocationSection = () => {
-  const { t } = useTranslation(["home", "common"]);
-  const address = t("common:site.addressLong");
+  const address = "Corte Morgese 18 - angolo strada Attolini, 70121, Bari, Italia";
   const mapUrl = `https://www.google.com/maps/embed/v1/place?key=REPLACE_WITH_YOUR_API_KEY&q=${encodeURIComponent(address)}`;
   
   // Per semplicità e senza necessità di API Key immediata, usiamo un iframe standard con ricerca
@@ -19,10 +17,10 @@ const LocationSection = () => {
           <div className="lg:w-5/12 flex flex-col justify-center">
             <FadeIn direction="right">
               <p className="text-primary text-sm uppercase tracking-[0.2em] font-sans font-medium mb-4">
-                {t("home:location.eyebrow")}
+                Dove siamo
               </p>
               <h2 className="text-3xl md:text-5xl font-serif font-bold text-foreground mb-8">
-                {t("home:location.titleTop")} <br />{t("home:location.titleBottom")}
+                Nel cuore pulsante <br />di Bari Vecchia
               </h2>
               
               <div className="space-y-8">
@@ -31,9 +29,9 @@ const LocationSection = () => {
                     <MapPin className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-foreground mb-1">{t("home:location.addressTitle")}</h4>
+                    <h4 className="font-bold text-foreground mb-1">Indirizzo</h4>
                     <p className="text-muted-foreground text-sm uppercase tracking-tight">
-                      {t("common:site.addressShort")}
+                      Corte Morgese 18, 70121 Bari (BA)
                     </p>
                   </div>
                 </div>
@@ -43,19 +41,19 @@ const LocationSection = () => {
                     <Navigation className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-foreground mb-3">{t("home:location.directionsTitle")}</h4>
+                    <h4 className="font-bold text-foreground mb-3">Come raggiungerci dal Castello Svevo</h4>
                     <div className="space-y-4 text-muted-foreground text-sm leading-relaxed font-light">
                       <p>
-                        <strong>1. </strong> {t("home:location.steps.one")}
+                        <strong>1. </strong> Lasciati il maestoso Castello Svevo alle spalle e attraversa Piazza Federico II di Svevia in direzione della città vecchia.
                       </p>
                       <p>
-                        <strong>2. </strong> {t("home:location.steps.two")}
+                        <strong>2. </strong> Entra nel cuore del borgo attraverso i vicoli che portano verso la Cattedrale di San Sabino.
                       </p>
                       <p>
-                        <strong>3. </strong> {t("home:location.steps.three")}
+                        <strong>3. </strong> Una volta raggiunta la piazza della Cattedrale, prosegui verso est addentrandoti nelle stradine più intime fino a incrociare Strada Attolini.
                       </p>
                       <p>
-                        <strong>4. </strong> {t("home:location.steps.four")}
+                        <strong>4. </strong> Corte Morgese si trova all'angolo, un'oasi di pace preservata dal tempo.
                       </p>
                     </div>
                   </div>
@@ -69,7 +67,7 @@ const LocationSection = () => {
             <FadeIn direction="left" fullWidth className="h-full">
               <div className="w-full h-full rounded-3xl overflow-hidden shadow-2xl border-4 border-white relative group">
                 <iframe
-                  title={t("common:media.mapTitle")}
+                  title="Google Maps"
                   src={simpleMapUrl}
                   width="100%"
                   height="100%"

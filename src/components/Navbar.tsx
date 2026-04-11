@@ -4,11 +4,8 @@ import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { useTranslation } from "react-i18next";
-import LanguageSwitcher from "./LanguageSwitcher";
 
 const Navbar = () => {
-  const { t } = useTranslation("nav");
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
@@ -20,10 +17,10 @@ const Navbar = () => {
   }, []);
 
   const links = [
-    { to: "/", label: t("links.home") },
-    { to: "/camere", label: t("links.rooms") },
-    { to: "/#posizione", label: t("links.location") },
-    { to: "/#esplora", label: t("links.explore") },
+    { to: "/", label: "Home" },
+    { to: "/camere", label: "Camere" },
+    { to: "/#posizione", label: "Dove Siamo" },
+    { to: "/#esplora", label: "Esplora Bari" },
     // { to: "/prenota", label: "Prenota" },
   ];
 
@@ -39,7 +36,7 @@ const Navbar = () => {
           "font-serif text-xl font-bold tracking-tight uppercase transition-colors",
           isTransparent ? "text-white drop-shadow-md" : "text-foreground"
         )}>
-          {t("brand")}
+          Corte del Borgo Antico
         </Link>
 
         {/* Desktop */}
@@ -58,9 +55,8 @@ const Navbar = () => {
               {l.label}
             </Link>
           ))}
-          <LanguageSwitcher inverted={isTransparent} />
           <Button asChild size="sm" className={cn(isTransparent && "bg-white text-primary hover:bg-white/90")}>
-            <Link to="/prenota">{t("cta.bookNow")}</Link>
+            <Link to="/prenota">Prenota ora</Link>
           </Button>
         </div>
 
@@ -93,9 +89,8 @@ const Navbar = () => {
                   {l.label}
                 </Link>
               ))}
-              <LanguageSwitcher onLanguageChange={() => setOpen(false)} />
               <Button asChild size="lg" className="w-full h-14 rounded-xl text-lg font-bold">
-                <Link to="/prenota" onClick={() => setOpen(false)}>{t("cta.bookNow")}</Link>
+                <Link to="/prenota" onClick={() => setOpen(false)}>Prenota ora</Link>
               </Button>
             </div>
           </motion.div>

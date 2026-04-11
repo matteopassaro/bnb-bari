@@ -4,24 +4,24 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Wifi, Wind, Coffee, Tv, Maximize, Users, Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { Wifi, Wind, Waves, Coffee, Tv, Maximize, Users, Bed, Check, ChevronLeft, ChevronRight, GlassWater } from "lucide-react";
 import { cn } from "@/lib/utils";
 import FadeIn from "@/components/FadeIn";
 import useEmblaCarousel from 'embla-carousel-react';
-import { useTranslation } from "react-i18next";
-import type { RoomAmenityKey } from "@/data/rooms";
 
-const getIcon = (amenity: RoomAmenityKey) => {
-  if (amenity === "wifi") return <Wifi className="h-4 w-4" />;
-  if (amenity === "airConditioning") return <Wind className="h-4 w-4" />;
-  if (amenity === "coffeeMachine" || amenity === "kettle") return <Coffee className="h-4 w-4" />;
-  if (amenity === "smartTv") return <Tv className="h-4 w-4" />;
-  if (amenity === "kitchenArea") return <Maximize className="h-4 w-4" />;
+const getIcon = (amenity: string) => {
+  const a = amenity.toLowerCase();
+  if (a.includes("wi-fi")) return <Wifi className="h-4 w-4" />;
+  if (a.includes("aria condizionata")) return <Wind className="h-4 w-4" />;
+  if (a.includes("vista mare")) return <Waves className="h-4 w-4" />;
+  if (a.includes("colazione")) return <Coffee className="h-4 w-4" />;
+  if (a.includes("tv")) return <Tv className="h-4 w-4" />;
+  if (a.includes("balcone")) return <Maximize className="h-4 w-4" />;
+  if (a.includes("minibar")) return <GlassWater className="h-4 w-4" />;
   return <Check className="h-4 w-4" />;
 };
 
 const RoomGallery = ({ images, name }: { images: string[]; name: string }) => {
-  const { t } = useTranslation("common");
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true });
   const [selectedIndex, setSelectedIndex] = useState(0);
 
@@ -77,14 +77,14 @@ const RoomGallery = ({ images, name }: { images: string[]; name: string }) => {
       <button 
         onClick={scrollPrev}
         className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 backdrop-blur-sm border flex items-center justify-center text-foreground hover:bg-white transition-all opacity-0 group-hover:opacity-100 z-10"
-        aria-label={t("media.previousImage")}
+        aria-label="Previous image"
       >
         <ChevronLeft className="h-6 w-6" />
       </button>
       <button 
         onClick={scrollNext}
         className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 backdrop-blur-sm border flex items-center justify-center text-foreground hover:bg-white transition-all opacity-0 group-hover:opacity-100 z-10"
-        aria-label={t("media.nextImage")}
+        aria-label="Next image"
       >
         <ChevronRight className="h-6 w-6" />
       </button>
@@ -105,8 +105,6 @@ const RoomGallery = ({ images, name }: { images: string[]; name: string }) => {
 };
 
 const Camere = () => {
-  const { t } = useTranslation(["home", "common"]);
-
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -116,17 +114,17 @@ const Camere = () => {
         <div className="container mx-auto px-4">
           <FadeIn delay={0.1}>
             <p className="text-primary text-sm uppercase tracking-[0.3em] font-sans font-medium mb-4">
-              {t("home:roomsPage.eyebrow")}
+              Il tuo rifugio nel cuore di Bari
             </p>
           </FadeIn>
           <FadeIn delay={0.2}>
             <h1 className="text-4xl md:text-6xl font-serif font-bold text-foreground mb-6">
-              {t("home:roomsPage.title")}
+              Le Nostre Camere
             </h1>
           </FadeIn>
           <FadeIn delay={0.3}>
             <p className="max-w-2xl mx-auto text-muted-foreground leading-relaxed">
-              {t("home:roomsPage.description")}
+              Ogni stanza è un pezzo unico, arredata con cura e attenzione ai dettagli per farti vivere un soggiorno indimenticabile tra il bianco della pietra e l'azzurro del mare.
             </p>
           </FadeIn>
         </div>
@@ -135,11 +133,7 @@ const Camere = () => {
       {/* Showroom Content */}
       <section className="py-20 overflow-hidden">
         <div className="container mx-auto px-4 space-y-24 md:space-y-32">
-          {rooms.map((room, index) => {
-            const roomName = t(`roomsData.${room.id}.name`, { ns: "home" });
-            const roomDescription = t(`roomsData.${room.id}.description`, { ns: "home" });
-
-            return (
+          {rooms.map((room, index) => (
             <FadeIn 
               key={room.id} 
               direction={index % 2 === 0 ? "right" : "left"}
@@ -149,36 +143,36 @@ const Camere = () => {
                 className={`flex flex-col ${index % 2 === 0 ? 'lg:flex-row' : 'lg:flex-row-reverse'} gap-12 items-center`}
               >
                 {/* Image side - Now with Gallery */}
-                <RoomGallery images={room.images} name={roomName} />
+                <RoomGallery images={room.images} name={room.name} />
 
                 {/* Info side */}
                 <div className="w-full lg:w-1/2 space-y-8 px-4 lg:px-8">
                   <div>
                     <h2 className="text-3xl md:text-4xl font-serif font-bold text-foreground mb-4">
-                      {roomName}
+                      {room.name}
                     </h2>
                     <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-6">
                       <span className="flex items-center gap-1.5 bg-secondary/50 px-3 py-1 rounded-full">
-                        <Users className="h-4 w-4 text-primary" /> {t("common:counts.guestsCaps", { count: room.guests })}
+                        <Users className="h-4 w-4 text-primary" /> {room.guests} {room.guests === 1 ? 'Ospite' : 'Ospiti'}
                       </span>
                       <span className="flex items-center gap-1.5 bg-secondary/50 px-3 py-1 rounded-full">
                         <Maximize className="h-4 w-4 text-primary" /> {room.size}
                       </span>
                     </div>
                     <p className="text-lg text-muted-foreground leading-relaxed font-sans font-light">
-                      {roomDescription}
+                      {room.description}
                     </p>
                   </div>
 
                   <div className="space-y-4">
-                    <h3 className="text-sm uppercase tracking-widest font-semibold text-foreground/70">{t("home:roomsPage.includedComforts")}</h3>
+                    <h3 className="text-sm uppercase tracking-widest font-semibold text-foreground/70">Comfort inclusi</h3>
                     <div className="grid grid-cols-2 gap-y-3 gap-x-6">
                       {room.amenities.map((amenity) => (
                         <div key={amenity} className="flex items-center gap-3 text-sm text-foreground/80">
                           <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
                             {getIcon(amenity)}
                           </div>
-                          {t(`roomAmenities.${amenity}`, { ns: "home" })}
+                          {amenity}
                         </div>
                       ))}
                     </div>
@@ -186,19 +180,19 @@ const Camere = () => {
 
                   <div className="pt-6 border-t flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                     <div>
-                      <span className="text-sm text-muted-foreground block mb-1 font-sans">{t("common:labels.priceFrom")}</span>
+                      <span className="text-sm text-muted-foreground block mb-1 font-sans">A partire da</span>
                       <span className="text-3xl font-serif font-bold text-primary">€{room.price}</span>
-                      <span className="text-sm text-muted-foreground ml-1 font-sans">{t("common:labels.perNight")}</span>
+                      <span className="text-sm text-muted-foreground ml-1 font-sans">/ notte</span>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-3">
                       <Button asChild variant="outline" size="lg" className="rounded-full px-8 h-14 text-base font-semibold">
                         <Link to={`/camera/${room.id}`}>
-                          {t("common:actions.viewDetails")}
+                          Vedi Dettagli
                         </Link>
                       </Button>
                       <Button asChild size="lg" className="rounded-full px-8 h-14 text-base font-semibold shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all">
                         <Link to={`/prenota?room=${room.id}`}>
-                          {t("common:actions.bookNowCaps")}
+                          Prenota Ora
                         </Link>
                       </Button>
                     </div>
@@ -206,8 +200,7 @@ const Camere = () => {
                 </div>
               </div>
             </FadeIn>
-            );
-          })}
+          ))}
         </div>
       </section>
 
@@ -215,7 +208,7 @@ const Camere = () => {
       <section className="py-20 bg-primary/5">
         <div className="container mx-auto px-4 max-w-4xl text-center">
           <p className="text-2xl md:text-3xl font-serif italic text-foreground opacity-80 leading-relaxed">
-            "{t("home:roomsPage.quote")}"
+            "Soggionare in queste camere è come fare un tuffo nel passato della Puglia, ma con tutte le comodità moderne."
           </p>
           <div className="mt-8 h-px w-24 bg-primary/30 mx-auto" />
         </div>

@@ -2,22 +2,19 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CalendarIcon, Users } from "lucide-react";
 import { format } from "date-fns";
+import { it } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import heroImg from "@/assets/hero-bari.jpg";
 import FadeIn from "./FadeIn";
-import { useTranslation } from "react-i18next";
-import { getDateLocale } from "@/i18n/config";
 
 const HeroSection = () => {
-  const { t, i18n } = useTranslation(["home", "common"]);
   const navigate = useNavigate();
   const [checkIn, setCheckIn] = useState<Date>();
   const [checkOut, setCheckOut] = useState<Date>();
   const [guests, setGuests] = useState(2);
-  const dateLocale = getDateLocale(i18n.resolvedLanguage);
 
   const handleSearch = () => {
     const params = new URLSearchParams();
@@ -31,7 +28,7 @@ const HeroSection = () => {
     <section className="relative h-[85vh] min-h-[600px] flex items-center justify-center overflow-hidden">
       <img
         src={heroImg}
-        alt={t("home:hero.imageAlt")}
+        alt="Vista aerea di Bari, Puglia"
         className="absolute inset-0 w-full h-full object-cover"
         width={1920}
         height={1080}
@@ -41,17 +38,17 @@ const HeroSection = () => {
       <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
         <FadeIn delay={0.1}>
           <p className="text-primary-foreground/80 text-sm uppercase tracking-[0.3em] mb-4 font-sans font-medium">
-            {t("home:hero.eyebrow")}
+            B&B Corte del Borgo Antico
           </p>
         </FadeIn>
         <FadeIn delay={0.2}>
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-serif font-bold text-primary-foreground mb-6 leading-tight uppercase">
-            {t("home:hero.titleTop")}<br />{t("home:hero.titleBottom")}
+            Esplora Bari<br />Soggiornando in Comodità
           </h1>
         </FadeIn>
         <FadeIn delay={0.3}>
           <p className="text-primary-foreground/90 text-lg md:text-xl font-sans font-light mb-10 max-w-2xl mx-auto italic">
-            "{t("home:hero.quote")}"
+            "A soli 200 metri dal Castello Svevo, tra le mura della Città Vecchia di Bari."
           </p>
         </FadeIn>
 
@@ -70,7 +67,7 @@ const HeroSection = () => {
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {checkIn ? format(checkIn, "d MMM yyyy", { locale: dateLocale }) : t("common:labels.checkIn")}
+                    {checkIn ? format(checkIn, "d MMM yyyy", { locale: it }) : "Check-in"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -79,7 +76,6 @@ const HeroSection = () => {
                     selected={checkIn}
                     onSelect={setCheckIn}
                     disabled={(date) => date < new Date()}
-                    locale={dateLocale}
                     initialFocus
                     className="p-3 pointer-events-auto"
                   />
@@ -97,7 +93,7 @@ const HeroSection = () => {
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {checkOut ? format(checkOut, "d MMM yyyy", { locale: dateLocale }) : t("common:labels.checkOut")}
+                    {checkOut ? format(checkOut, "d MMM yyyy", { locale: it }) : "Check-out"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -106,7 +102,6 @@ const HeroSection = () => {
                     selected={checkOut}
                     onSelect={setCheckOut}
                     disabled={(date) => date < (checkIn || new Date())}
-                    locale={dateLocale}
                     initialFocus
                     className="p-3 pointer-events-auto"
                   />
@@ -122,13 +117,13 @@ const HeroSection = () => {
                   className="bg-transparent text-sm font-medium w-full outline-none"
                 >
                   {[1, 2, 3, 4].map((n) => (
-                    <option key={n} value={n}>{t("common:counts.guests", { count: n })}</option>
+                    <option key={n} value={n}>{n} {n === 1 ? "ospite" : "ospiti"}</option>
                   ))}
                 </select>
               </div>
 
               <Button onClick={handleSearch} className="h-12 px-8 text-sm font-semibold">
-                {t("common:actions.search")}
+                Cerca
               </Button>
             </div>
           </div>
