@@ -2,8 +2,10 @@ import { useState } from "react";
 import { MessageCircle, Phone, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "./ui/button";
+import { useTranslation } from "react-i18next";
 
 const FloatingContact = () => {
+  const { t } = useTranslation("common");
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -18,7 +20,7 @@ const FloatingContact = () => {
           >
             <div className="space-y-3">
               <p className="text-xs uppercase tracking-widest text-muted-foreground font-bold px-2 py-1">
-                Come preferisci contattarci?
+                {t("floatingContact.prompt")}
               </p>
               
               <a 
@@ -31,8 +33,8 @@ const FloatingContact = () => {
                   <MessageCircle className="h-5 w-5 fill-white" />
                 </div>
                 <div className="text-left">
-                  <p className="font-bold text-sm">WhatsApp</p>
-                  <p className="text-[10px] opacity-80">Risposta rapida</p>
+                  <p className="font-bold text-sm">{t("floatingContact.whatsapp")}</p>
+                  <p className="text-[10px] opacity-80">{t("floatingContact.whatsappSubtitle")}</p>
                 </div>
               </a>
 
@@ -44,8 +46,8 @@ const FloatingContact = () => {
                   <Phone className="h-5 w-5" />
                 </div>
                 <div className="text-left">
-                  <p className="font-bold text-sm">Telefono</p>
-                  <p className="text-[10px] opacity-80">Parla con noi</p>
+                  <p className="font-bold text-sm">{t("floatingContact.phone")}</p>
+                  <p className="text-[10px] opacity-80">{t("floatingContact.phoneSubtitle")}</p>
                 </div>
               </a>
             </div>

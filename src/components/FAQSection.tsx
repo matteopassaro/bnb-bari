@@ -2,31 +2,12 @@ import { useState } from "react";
 import FadeIn from "./FadeIn";
 import { Plus, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
-const faqs = [
-  {
-    question: "Dove posso parcheggiare l'auto?",
-    answer: "Corte Morgese si trova in una zona a traffico limitato (ZTL). Il parcheggio più vicino e comodo è sul Lungomare Imperatore Augusto, a soli 5 minuti a piedi. Potete scaricare i bagagli nelle vicinanze prima di posteggiare."
-  },
-  {
-    question: "Il quartiere è sicuro anche di sera?",
-    answer: "Assolutamente sì. Bari Vecchia è oggi il cuore pulsante e turistico della città, sorvegliato, vivace e frequentato da famiglie e turisti fino a tarda notte grazie ai numerosi locali e ristoranti d'eccellenza."
-  },
-  {
-    question: "È possibile effettuare il check-in tardivo?",
-    answer: "Certamente. Utilizziamo un sistema di check-in express con codici privati che vi permette di accedere alla struttura in totale autonomia a qualsiasi ora, senza dover attendere nessuno per le chiavi."
-  },
-  {
-    question: "Offrite colazione tipica barese?",
-    answer: "La struttura offre alloggi attrezzati con cucina indipendente. Siamo però letteralmente a 50 metri dai bar storici più autentici del quartiere: vi indicheremo noi dove gustare il miglior cornetto o focaccia barese appena sfornata."
-  },
-  {
-    question: "Posso lasciare i bagagli prima del check-in?",
-    answer: "Sì, disponiamo di un deposito bagagli custodito all'interno della Corte. Potete lasciarli da noi al mattino e iniziare subito la vostra esplorazione di Bari a mani libere."
-  }
-];
+const faqs = ["parking", "safety", "lateCheckin", "breakfast", "luggage"];
 
 const FAQSection = () => {
+  const { t } = useTranslation("home");
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
@@ -36,10 +17,10 @@ const FAQSection = () => {
           <div className="text-center mb-16">
             <FadeIn direction="up">
               <p className="text-primary text-sm uppercase tracking-[0.2em] font-sans font-medium mb-3">
-                Informazioni utili
+                {t("faq.eyebrow")}
               </p>
               <h2 className="text-3xl md:text-5xl font-serif font-bold text-foreground">
-                Domande Frequenti
+                {t("faq.title")}
               </h2>
             </FadeIn>
           </div>
@@ -52,7 +33,7 @@ const FAQSection = () => {
                     onClick={() => setOpenIndex(openIndex === i ? null : i)}
                     className="w-full flex items-center justify-between p-6 text-left hover:bg-muted/50 transition-colors"
                   >
-                    <span className="font-serif font-bold text-lg text-foreground">{faq.question}</span>
+                    <span className="font-serif font-bold text-lg text-foreground">{t(`faq.items.${faq}.question`)}</span>
                     <div className="shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
                         {openIndex === i ? <Minus className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
                     </div>
@@ -62,7 +43,7 @@ const FAQSection = () => {
                     openIndex === i ? "max-h-96 pb-6 px-6" : "max-h-0"
                   )}>
                     <p className="text-muted-foreground leading-relaxed">
-                      {faq.answer}
+                      {t(`faq.items.${faq}.answer`)}
                     </p>
                   </div>
                 </div>

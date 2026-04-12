@@ -9,8 +9,11 @@ import ReviewsSection from "@/components/ReviewsSection";
 import FAQSection from "@/components/FAQSection";
 import Footer from "@/components/Footer";
 import { Helmet } from "react-helmet-async";
+import { useTranslation } from "react-i18next";
 
 const Index = () => {
+  const { t } = useTranslation("home");
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "LodgingBusiness",
@@ -41,8 +44,8 @@ const Index = () => {
   return (
     <div className="min-h-screen">
       <Helmet>
-        <title>B&B Corte del Borgo Antico | Soggiorno di Charme a Bari Vecchia</title>
-        <meta name="description" content="Vivi l'autenticità di Bari Vecchia a Corte del Borgo Antico. Camere eleganti in pietra viva a 200m dalla Cattedrale. Prenota il tuo soggiorno di charme." />
+        <title>{t("home:meta.title")}</title>
+        <meta name="description" content={t("home:meta.description")} />
         <script type="application/ld+json">
           {`
             ${JSON.stringify(jsonLd)}
