@@ -207,8 +207,8 @@ const RoomDetail = () => {
                 <h2 className="text-3xl font-serif font-bold mb-8 tracking-tight">{t("home:roomDetail.retreatTitle")}</h2>
                 <div className="prose prose-slate max-w-none text-muted-foreground leading-relaxed text-lg font-light space-y-8">
                   <p>
-                    <Trans i18nKey="home:roomDetail.storyParagraphOne" values={{ roomName }} components={{ strong: <strong /> }} />
-                  </p>
+                    <Trans i18nKey="home:roomDetastoryParagraphOne" values={{ roomName }} components={{ strong: <strong /> }} />
+                  </p>il.
                   <p>
                     <Trans i18nKey="home:roomDetail.storyParagraphTwo" components={{ strong: <strong /> }} />
                   </p>
