@@ -86,7 +86,7 @@ serve(async (req: Request) => {
     return new Response(`Webhook Error: ${err?.message}`, { status: 400 });
   }
 
-  const processEvent = async (event: Stripe.Event) => {
+  const processEvent = async (event: Stripe.Event): Promise<Response | undefined> => {
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
@@ -128,35 +128,70 @@ serve(async (req: Request) => {
           throw updateError;
         }
 
-        // 3. Blocca date su Supabase
-        const { error: blockError } = await supabase.from("blocked_dates").insert({
-          room_id: metadata.room_id,
-          date_from: metadata.check_in,
-          date_to: metadata.check_out,
-          source: "stripe",
-        });
-        if (blockError) console.error("[stripe-webhook] Block dates error:", blockError);
-        else console.log("[stripe-webhook] Dates blocked successfully");
+        // 3. Blocca date su Supabase (only if not already exists - might have been created in create-checkout-session)
+        const { data: existingBlock } = await supabase
+          .from("blocked_dates")
+          .select("id")
+          .eq("room_id", metadata.room_id)
+          .eq("date_from", metadata.check_in)
+          .eq("date_to", metadata.check_out)
+          .eq("source", "stripe")
+          .single();
 
-        // 4. Propaga su Smoobu (fire & forget — non blocca la risposta a Stripe)
+        if (!existingBlock) {
+          const { error: blockError } = await supabase.from("blocked_dates").insert({
+            room_id: metadata.room_id,
+            date_from: metadata.check_in,
+            date_to: metadata.check_out,
+            source: "stripe",
+          });
+          if (blockError) console.error("[stripe-webhook] Block dates error:", blockError);
+          else console.log("[stripe-webhook] Dates blocked successfully");
+        } else {
+          console.log("[stripe-webhook] Dates already blocked (created in checkout)");
+        }
+
+        // 4. Propaga su Smoobu (con retry)
         const supabaseUrl = Deno.env.get("SUPABASE_URL");
-        fetch(`${supabaseUrl}/functions/v1/smoobu-create-reservation`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            booking_id: booking.id,
-            room_id: booking.room_id,
-            check_in: booking.check_in,
-            check_out: booking.check_out,
-            guests: booking.guests,
-            customer_name: booking.customer_name,
-            customer_email: booking.customer_email,
-            customer_phone: booking.customer_phone,
-            total_price: booking.total_price,
-          }),
-        }).catch((err) =>
-          console.error("[stripe-webhook] Smoobu create-reservation error:", err)
-        );
+        const maxRetries = 3;
+        const baseDelay = 1000;
+        let smoobuSuccess = false;
+        let lastSmoobuError = null;
+
+        for (let attempt = 1; attempt <= maxRetries && !smoobuSuccess; attempt++) {
+          try {
+            const res = await fetch(`${supabaseUrl}/functions/v1/smoobu-create-reservation`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                booking_id: booking.id,
+                room_id: booking.room_id,
+                check_in: booking.check_in,
+                check_out: booking.check_out,
+                guests: booking.guests,
+                customer_name: booking.customer_name,
+                customer_email: booking.customer_email,
+                customer_phone: booking.customer_phone,
+                total_price: booking.total_price,
+              }),
+            });
+            const responseBody = await res.text();
+            console.log(`[stripe-webhook] Smoobu response (attempt ${attempt}): ${res.status}`, responseBody);
+            if (!res.ok) throw new Error(`Smoobu API error: ${res.status} - ${responseBody}`);
+            smoobuSuccess = true;
+            console.log(`[stripe-webhook] Smoobu reservation created (attempt ${attempt})`);
+          } catch (err) {
+            lastSmoobuError = err;
+            console.error(`[stripe-webhook] Smoobu attempt ${attempt} failed:`, err);
+            if (attempt < maxRetries) {
+              await new Promise((r) => setTimeout(r, baseDelay * attempt));
+            }
+          }
+        }
+
+        if (!smoobuSuccess) {
+          console.error("[stripe-webhook] Smoobu sync failed after all retries:", lastSmoobuError);
+        }
 
         // 5. Email (solo se non già inviate)
         if (RESEND_SECRET_KEY && !booking.email_sent) {
@@ -259,13 +294,18 @@ serve(async (req: Request) => {
             `[stripe-webhook] Guest email: ${guestRes.status}, Owner email: ${ownerRes?.status ?? "skipped"}`
           );
 
-          // Marca email come inviate
-          await supabase
-            .from("bookings")
-            .update({ email_sent: true })
-            .eq("id", booking.id);
-
-          console.log("[stripe-webhook] email_sent flag updated");
+          // Marca email come inviate SOLO se entrambe hanno avuto successo
+          const guestOk = guestRes.ok;
+          const ownerOk = !OWNER_EMAIL || (ownerRes?.ok ?? false);
+          if (guestOk) {
+            await supabase
+              .from("bookings")
+              .update({ email_sent: true })
+              .eq("id", booking.id);
+            console.log("[stripe-webhook] email_sent flag updated");
+          } else {
+            console.error("[stripe-webhook] Email failed, not marking as sent");
+          }
         }
 
       // ── charge.refunded ────────────────────────────────────────────────────
@@ -296,6 +336,49 @@ serve(async (req: Request) => {
           .eq("date_from", booking.check_in)
           .eq("date_to", booking.check_out)
           .eq("source", "stripe");
+
+        // Cancella prenotazione su Smoobu
+        if (booking.smoobu_reservation_id) {
+          const supabaseUrl = Deno.env.get("SUPABASE_URL");
+          const maxRetries = 3;
+          const baseDelay = 1000;
+          let smoobuSuccess = false;
+
+          for (let attempt = 1; attempt <= maxRetries && !smoobuSuccess; attempt++) {
+            try {
+              const res = await fetch(
+                `${supabaseUrl}/functions/v1/smoobu-cancel-reservation`,
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    reservation_id: booking.smoobu_reservation_id,
+                    room_id: booking.room_id,
+                  }),
+                }
+              );
+              const responseBody = await res.text();
+              console.log(
+                `[stripe-webhook] Smoobu cancel response (attempt ${attempt}): ${res.status}`,
+                responseBody
+              );
+              if (!res.ok) throw new Error(`Smoobu cancel error: ${res.status} - ${responseBody}`);
+              smoobuSuccess = true;
+              console.log(
+                `[stripe-webhook] Smoobu reservation cancelled (attempt ${attempt})`
+              );
+            } catch (err) {
+              console.error(`[stripe-webhook] Smoobu cancel attempt ${attempt} failed:`, err);
+              if (attempt < maxRetries) {
+                await new Promise((r) => setTimeout(r, baseDelay * attempt));
+              }
+            }
+          }
+
+          if (!smoobuSuccess) {
+            throw new Error("Failed to cancel Smoobu reservation after all retries");
+          }
+        }
 
         if (RESEND_SECRET_KEY) {
           await Promise.all([
@@ -340,13 +423,18 @@ serve(async (req: Request) => {
       }
     } catch (err: any) {
       console.error("[stripe-webhook] Processing error:", err?.message || err);
+      return new Response(
+        JSON.stringify({ error: "Processing failed", details: err?.message }),
+        { status: 500 }
+      );
     }
   };
 
   if (typeof (globalThis as any).EdgeRuntime !== "undefined") {
     (globalThis as any).EdgeRuntime.waitUntil(processEvent(event));
   } else {
-    processEvent(event).catch(console.error);
+    const processResult = await processEvent(event);
+    if (processResult) return processResult;
   }
 
   return new Response(JSON.stringify({ received: true }), {

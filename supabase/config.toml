@@ -13,5 +13,8 @@ verify_jwt = false
 [functions.smoobu-sync-reservations]
 verify_jwt = false
 
+[functions.smoobu-cancel-reservation]
+verify_jwt = false
+
 [functions.create-checkout-session]
 verify_jwt = false

@@ -2,22 +2,22 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 
 // ─── Configurazione camere ────────────────────────────────────────────────────
-// Mappa room_id (nostro) → iCal URL (Smoobu)
-// Per aggiornare: Smoobu → ogni camera → Edit → copia URL iCal
+// FIX: room_id devono corrispondere esattamente a rooms.ts
+// "camera-tripla-deluxe", "camera-matrimoniale", "monolocale-pietra"
 const ROOM_ICAL_MAP: Record<string, string | undefined> = {
   "camera-tripla-deluxe": Deno.env.get("ICAL_URL_TRIPLA"),
-  "camera-doppia":        Deno.env.get("ICAL_URL_DOPPIA"),
-  "monolocale":           Deno.env.get("ICAL_URL_MONOLOCALE"),
+  "camera-matrimoniale":  Deno.env.get("ICAL_URL_DOPPIA"),    // variabile env invariata, room_id corretto
+  "monolocale-pietra":    Deno.env.get("ICAL_URL_MONOLOCALE"),
 };
 
-const FETCH_TIMEOUT_MS = 50_000; // 50 secondi — Smoobu può essere lento
+const FETCH_TIMEOUT_MS = 50_000;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// ─── Parser iCal manuale ──────────────────────────────────────────────────────
+// ─── Parser iCal ──────────────────────────────────────────────────────────────
 type ICalEvent = { date_from: string; date_to: string };
 
 function parseIcs(icsText: string): ICalEvent[] {
@@ -69,7 +69,6 @@ function normalizeDate(raw: string): string | null {
   return null;
 }
 
-// ─── Fetch con timeout ────────────────────────────────────────────────────────
 async function fetchWithTimeout(url: string, timeoutMs: number): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -80,13 +79,13 @@ async function fetchWithTimeout(url: string, timeoutMs: number): Promise<Respons
   } catch (err: unknown) {
     clearTimeout(timer);
     if (err instanceof Error && err.name === "AbortError") {
-      throw new Error(`Timeout dopo ${timeoutMs / 1000}s fetching iCal`);
+      throw new Error(`Timeout dopo ${timeoutMs / 1000}s`);
     }
     throw err;
   }
 }
 
-// ─── Handler principale ───────────────────────────────────────────────────────
+// ─── Handler ──────────────────────────────────────────────────────────────────
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -97,7 +96,7 @@ serve(async (req: Request) => {
 
   const configuredRooms = Object.entries(ROOM_ICAL_MAP).filter(([, url]) => !!url);
   if (configuredRooms.length === 0) {
-    console.log("[sync-ical] Nessun URL iCal configurato nei Secrets. Uscita.");
+    console.log("[sync-ical] Nessun URL iCal configurato. Uscita.");
     return new Response(
       JSON.stringify({ message: "Nessun URL iCal configurato" }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -112,19 +111,17 @@ serve(async (req: Request) => {
   const results: Record<string, { synced: number; error?: string }> = {};
 
   for (const [roomId, icalUrl] of configuredRooms) {
-    console.log(`[sync-ical] Processing room: ${roomId}`);
+    console.log(`[sync-ical] Processing: ${roomId}`);
     try {
-      // 1. Fetch con timeout di 50 secondi
       const res = await fetchWithTimeout(icalUrl!, FETCH_TIMEOUT_MS);
-      if (!res.ok) throw new Error(`HTTP ${res.status} fetching iCal for ${roomId}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const icsText = await res.text();
-      console.log(`[sync-ical] iCal fetched for ${roomId}: ${icsText.length} bytes`);
+      console.log(`[sync-ical] Fetched ${icsText.length} bytes for ${roomId}`);
 
-      // 2. Parsa
       const events = parseIcs(icsText);
       console.log(`[sync-ical] Parsed ${events.length} events for ${roomId}`);
 
-      // 3. Delete righe ical di questa camera (non tocca stripe e manual)
+      // Delete + Insert atomico — non tocca source stripe e manual
       const { error: deleteError } = await supabase
         .from("blocked_dates")
         .delete()
@@ -132,7 +129,6 @@ serve(async (req: Request) => {
         .eq("source", "ical");
       if (deleteError) throw deleteError;
 
-      // 4. Insert nuovi eventi
       if (events.length > 0) {
         const rows = events.map((e) => ({
           room_id: roomId,
@@ -145,31 +141,19 @@ serve(async (req: Request) => {
       }
 
       results[roomId] = { synced: events.length };
-      console.log(`[sync-ical] ✓ ${roomId}: ${events.length} eventi sincronizzati`);
-
+      console.log(`[sync-ical] ✓ ${roomId}: ${events.length} eventi`);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       console.error(`[sync-ical] ✗ ${roomId}: ${message}`);
       results[roomId] = { synced: 0, error: message };
-      // Continua con le altre camere anche se una fallisce
     }
   }
 
   const totalSynced = Object.values(results).reduce((sum, r) => sum + r.synced, 0);
   const hasErrors = Object.values(results).some((r) => r.error);
 
-  console.log(`[sync-ical] Completato. Totale: ${totalSynced} eventi. Errori: ${hasErrors}`);
-
   return new Response(
-    JSON.stringify({
-      success: true,
-      total_synced: totalSynced,
-      has_errors: hasErrors,
-      rooms: results,
-    }),
-    {
-      status: hasErrors ? 207 : 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    }
+    JSON.stringify({ success: true, total_synced: totalSynced, has_errors: hasErrors, rooms: results }),
+    { status: hasErrors ? 207 : 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
   );
 });

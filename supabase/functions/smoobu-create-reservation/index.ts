@@ -6,8 +6,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 // Aggiorna i numeri quando passi all'account reale del committente
 const SMOOBU_APARTMENT_MAP: Record<string, number> = {
   "camera-tripla-deluxe": 3266077,
-  "camera-doppia":        3266252,
-  "monolocale":           3266182,
+  "camera-matrimoniale":  3266252,
+  "monolocale-pietra":    3266182,
 };
 
 const SMOOBU_API_BASE = "https://login.smoobu.com/api";
@@ -25,6 +25,10 @@ async function smoobuRequest(
 ): Promise<unknown> {
   const apiKey = Deno.env.get("SMOOBU_API_KEY");
   if (!apiKey) throw new Error("SMOOBU_API_KEY non configurata nei Secrets");
+  
+  console.log(`[smoobu] API Key present: ${apiKey.substring(0, 8)}...`);
+  console.log(`[smoobu] Request: ${method} ${endpoint}`);
+  console.log(`[smoobu] Payload:`, JSON.stringify(body, null, 2));
 
   const res = await fetch(`${SMOOBU_API_BASE}${endpoint}`, {
     method,
@@ -37,6 +41,9 @@ async function smoobuRequest(
   });
 
   const data = await res.json();
+
+  console.log(`[smoobu] Response status: ${res.status}`);
+  console.log(`[smoobu] Response body:`, JSON.stringify(data));
 
   if (!res.ok) {
     console.error(`[smoobu] API error ${res.status}:`, JSON.stringify(data));
@@ -74,6 +81,16 @@ serve(async (req: Request) => {
       customer_phone,
       total_price,
     } = await req.json();
+
+    console.log(`[smoobu-create-reservation] Received booking data:`, {
+      booking_id,
+      room_id,
+      check_in,
+      check_out,
+      guests,
+      customer_name,
+      total_price,
+    });
 
     // 1. Valida che il booking esista e sia paid
     const { data: booking, error: bookingError } = await supabase
@@ -133,7 +150,6 @@ serve(async (req: Request) => {
       priceStatus: 1,  // 1 = prezzo confermato
       deposit: 0,
       depositStatus: 1,
-      channelId: 9999963, // ID canale "Direct" su Smoobu
     };
 
     const smoobuResponse = await smoobuRequest(

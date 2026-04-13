@@ -23,6 +23,7 @@ serve(async (req: Request) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
+    // Cerca booking pending con stripe_session_id
     const { data: pendingBookings, error } = await supabase
       .from("bookings")
       .select("*")
@@ -35,22 +36,25 @@ serve(async (req: Request) => {
 
     let completed = 0;
     let expired = 0;
+    let skipped = 0;
 
     for (const booking of pendingBookings ?? []) {
       try {
         const session = await stripe.checkout.sessions.retrieve(booking.stripe_session_id);
 
         if (session.status === "complete" || session.payment_status === "paid") {
-          // Aggiorna solo stato e date — le email le manda stripe-webhook
-          // Se email_sent è false qui significa che il webhook ha fallito davvero
-          // In quel caso logghiamo ma NON mandiamo email per evitare duplicati
-          // TODO futuro: se email_sent === false dopo 1h → considera invio fallback
-          await supabase.from("bookings").update({
-            payment_status: "paid",
-            stripe_payment_intent_id: session.payment_intent as string || booking.stripe_payment_intent_id,
-          }).eq("id", booking.id);
+          // Aggiorna stato — le email le gestisce stripe-webhook
+          // Se email_sent è false significa che il webhook ha fallito
+          await supabase
+            .from("bookings")
+            .update({
+              payment_status: "paid",
+              stripe_payment_intent_id:
+                (session.payment_intent as string) || booking.stripe_payment_intent_id,
+            })
+            .eq("id", booking.id);
 
-          // Blocca date solo se non già bloccate
+          // FIX: Blocca date solo se non già bloccate (idempotente)
           const { data: existing } = await supabase
             .from("blocked_dates")
             .select("id")
@@ -58,7 +62,7 @@ serve(async (req: Request) => {
             .eq("date_from", booking.check_in)
             .eq("date_to", booking.check_out)
             .eq("source", "stripe")
-            .single();
+            .maybeSingle();
 
           if (!existing) {
             await supabase.from("blocked_dates").insert({
@@ -67,29 +71,66 @@ serve(async (req: Request) => {
               date_to: booking.check_out,
               source: "stripe",
             });
+            console.log(`[check-pending-bookings] Blocked dates for booking ${booking.id}`);
           }
 
-          console.log(`[check-pending-bookings] Reconciled booking ${booking.id} (email_sent: ${booking.email_sent})`);
+          console.log(
+            `[check-pending-bookings] ✓ Reconciled booking ${booking.id} (email_sent: ${booking.email_sent})`
+          );
           completed++;
 
         } else if (session.status === "expired") {
-          await supabase.from("bookings").update({ payment_status: "expired" }).eq("id", booking.id);
-          console.log(`[check-pending-bookings] Marked ${booking.id} as expired`);
+          // FIX CRITICO: marca come expired E libera le date bloccate
+          await supabase
+            .from("bookings")
+            .update({ payment_status: "expired" })
+            .eq("id", booking.id);
+
+          // Elimina eventuali date pre-bloccate da create-checkout-session
+          const { error: deleteError } = await supabase
+            .from("blocked_dates")
+            .delete()
+            .eq("room_id", booking.room_id)
+            .eq("date_from", booking.check_in)
+            .eq("date_to", booking.check_out)
+            .eq("source", "stripe");
+
+          if (deleteError) {
+            console.error(
+              `[check-pending-bookings] Error deleting blocked dates for expired booking ${booking.id}:`,
+              deleteError
+            );
+          } else {
+            console.log(
+              `[check-pending-bookings] ✓ Freed dates for expired booking ${booking.id}`
+            );
+          }
+
           expired++;
+
+        } else {
+          // Sessione ancora aperta (open) — skip
+          skipped++;
         }
       } catch (err) {
         console.error(`[check-pending-bookings] Error on booking ${booking.id}:`, err);
       }
     }
 
-    return new Response(JSON.stringify({ success: true, completed, expired }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  } catch (err: any) {
-    console.error("[check-pending-bookings] Critical error:", err);
-    return new Response(JSON.stringify({ error: err?.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    console.log(
+      `[check-pending-bookings] Done. Completed: ${completed}, Expired: ${expired}, Skipped (open): ${skipped}`
+    );
+
+    return new Response(
+      JSON.stringify({ success: true, completed, expired, skipped }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[check-pending-bookings] Critical error:", message);
+    return new Response(
+      JSON.stringify({ error: message }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   }
 });

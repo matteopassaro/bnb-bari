@@ -6,8 +6,8 @@ const SMOOBU_API_BASE = "https://login.smoobu.com/api";
 // Mappa apartment ID Smoobu → room_id nostro (inversa di smoobu-create-reservation)
 const SMOOBU_TO_ROOM_MAP: Record<number, string> = {
   3266077: "camera-tripla-deluxe",
-  3266252: "camera-doppia",
-  3266182: "monolocale",
+  3266252: "camera-matrimoniale",
+  3266182: "monolocale-pietra",
 };
 
 const corsHeaders = {
