@@ -207,13 +207,17 @@ const RoomDetail = () => {
                 <h2 className="text-3xl font-serif font-bold mb-8 tracking-tight">{t("home:roomDetail.retreatTitle")}</h2>
                 <div className="prose prose-slate max-w-none text-muted-foreground leading-relaxed text-lg font-light space-y-8">
                   <p>
-                    <Trans i18nKey="home:roomDetail.storyParagraphOne" values={{ roomName }} components={{ strong: <strong /> }} />
+                    <Trans
+                    i18nKey={"home:roomDetail.storyParagraphOne" as any}
+                    values={{ roomName } as any}
+                    components={{ strong: <strong /> }}
+                    />
                   </p>
                   <p>
-                    <Trans i18nKey="home:roomDetail.storyParagraphTwo" components={{ strong: <strong /> }} />
+                    <Trans i18nKey={"home:roomDetail.storyParagraphTwo" as any} components={{ strong: <strong /> }} />
                   </p>
                   <p>
-                    <Trans i18nKey="home:roomDetail.storyParagraphThree" components={{ strong: <strong /> }} />
+                    <Trans i18nKey={"home:roomDetail.storyParagraphThree" as any} components={{ strong: <strong /> }} />
                   </p>
                 </div>
                 
@@ -254,7 +258,7 @@ const RoomDetail = () => {
                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
                         {item.icon}
                       </div>
-                      <span className="font-medium">{t(`home:roomDetailAmenities.${item.key}`)}</span>
+                      <span className="font-medium">{t(`home:roomDetailAmenities.${item.key}` as any)}</span>
                     </div>
                   ))}
                   <div className="flex items-center gap-3 text-sm text-foreground/80">

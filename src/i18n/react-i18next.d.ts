@@ -7,6 +7,7 @@ import nav from "./locales/it/nav.json";
 declare module "i18next" {
   interface CustomTypeOptions {
     defaultNS: "common";
+    ns: ["common", "home", "booking", "nav"];
     resources: {
       common: typeof common;
       home: typeof home;

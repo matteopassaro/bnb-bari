@@ -10,6 +10,8 @@ const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") ?? "", {
 const RESEND_SECRET_KEY = Deno.env.get("RESEND_SECRET_KEY");
 const OWNER_EMAIL = Deno.env.get("OWNER_EMAIL");
 const FROM_EMAIL = "Corte del Borgo Antico <noreply@matteopassaro.dev>";
+
+// ─── Traduzioni email ospite ──────────────────────────────────────────────────
 const translations = {
   it: {
     subject: "Prenotazione confermata — Corte del Borgo Antico",
@@ -49,6 +51,16 @@ const translations = {
   },
 } as const;
 
+type SupportedLang = keyof typeof translations;
+
+const normalizeLang = (lang?: string): SupportedLang => {
+  const l = (lang ?? "").toLowerCase().trim();
+  if (l.startsWith("it")) return "it";
+  return "en";
+};
+
+// ─── Handler ──────────────────────────────────────────────────────────────────
+
 serve(async (req: Request) => {
   console.log(`[stripe-webhook] Request received at ${new Date().toISOString()}`);
 
@@ -81,6 +93,7 @@ serve(async (req: Request) => {
     );
 
     try {
+      // ── checkout.session.completed ─────────────────────────────────────────
       if (event.type === "checkout.session.completed") {
         const session = event.data.object as Stripe.Checkout.Session;
         const metadata = session.metadata;
@@ -98,12 +111,13 @@ serve(async (req: Request) => {
           return;
         }
 
-        // 2. Update booking to paid
+        // 2. Update booking → paid
         const { data: booking, error: updateError } = await supabase
           .from("bookings")
           .update({
             payment_status: "paid",
-            stripe_payment_intent_id: session.payment_intent as string || existing?.stripe_payment_intent_id,
+            stripe_payment_intent_id:
+              (session.payment_intent as string) || existing?.stripe_payment_intent_id,
           })
           .eq("stripe_session_id", session.id)
           .select()
@@ -114,38 +128,45 @@ serve(async (req: Request) => {
           throw updateError;
         }
 
-        // 3. Block dates
-        const { error: blockError } = await supabase
-          .from("blocked_dates")
-          .insert({
-            room_id: metadata.room_id,
-            date_from: metadata.check_in,
-            date_to: metadata.check_out,
-            source: "stripe",
-          });
-
+        // 3. Blocca date su Supabase
+        const { error: blockError } = await supabase.from("blocked_dates").insert({
+          room_id: metadata.room_id,
+          date_from: metadata.check_in,
+          date_to: metadata.check_out,
+          source: "stripe",
+        });
         if (blockError) console.error("[stripe-webhook] Block dates error:", blockError);
         else console.log("[stripe-webhook] Dates blocked successfully");
 
-        // 4. Send emails (solo se non già inviate)
+        // 4. Propaga su Smoobu (fire & forget — non blocca la risposta a Stripe)
+        const supabaseUrl = Deno.env.get("SUPABASE_URL");
+        fetch(`${supabaseUrl}/functions/v1/smoobu-create-reservation`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            booking_id: booking.id,
+            room_id: booking.room_id,
+            check_in: booking.check_in,
+            check_out: booking.check_out,
+            guests: booking.guests,
+            customer_name: booking.customer_name,
+            customer_email: booking.customer_email,
+            customer_phone: booking.customer_phone,
+            total_price: booking.total_price,
+          }),
+        }).catch((err) =>
+          console.error("[stripe-webhook] Smoobu create-reservation error:", err)
+        );
+
+        // 5. Email (solo se non già inviate)
         if (RESEND_SECRET_KEY && !booking.email_sent) {
-          // const lang: keyof typeof translations = (metadata.language ?? "").toLowerCase().startsWith("it") ? "it" : "en";
-          type SupportedLang = "it" | "en";
-
-          const normalizeLang = (lang?: string): SupportedLang => {
-            if (!lang) return "en";
-            const l = (lang ?? "").toLowerCase().trim();
-
-            if (l.startsWith("it")) return "it";
-            if (l.startsWith("en")) return "en";
-
-            return "en";
-          };
           const lang = normalizeLang(metadata.language);
           const t = translations[lang];
 
           const nights = Math.ceil(
-            (new Date(metadata.check_out).getTime() - new Date(metadata.check_in).getTime()) / (1000 * 3600 * 24)
+            (new Date(metadata.check_out).getTime() -
+              new Date(metadata.check_in).getTime()) /
+              (1000 * 3600 * 24)
           );
 
           const guestHtml = `
@@ -195,7 +216,10 @@ serve(async (req: Request) => {
                 <tr style="background:#f8f9fa;"><td style="padding: 8px; color: #666;">Check-out</td><td style="padding: 8px;">${metadata.check_out}</td></tr>
                 <tr><td style="padding: 8px; color: #666;">Notti</td><td style="padding: 8px;">${nights}</td></tr>
                 <tr style="background:#f8f9fa;"><td style="padding: 8px; color: #666;">Ospiti</td><td style="padding: 8px;">${metadata.guests}</td></tr>
-                <tr style="border-top: 2px solid #2a9d8f;"><td style="padding: 12px 8px; font-weight: bold;">Totale incassato</td><td style="padding: 12px 8px; font-weight: bold; color: #2a9d8f; font-size: 18px;">€${metadata.total_price}</td></tr>
+                <tr style="border-top: 2px solid #2a9d8f;">
+                  <td style="padding: 12px 8px; font-weight: bold;">Totale incassato</td>
+                  <td style="padding: 12px 8px; font-weight: bold; color: #2a9d8f; font-size: 18px;">€${metadata.total_price}</td>
+                </tr>
               </table>
               <p style="font-size: 12px; color: #999;">ID Prenotazione: #${booking.id}</p>
             </div>`;
@@ -203,7 +227,10 @@ serve(async (req: Request) => {
           const [guestRes, ownerRes] = await Promise.all([
             fetch("https://api.resend.com/emails", {
               method: "POST",
-              headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_SECRET_KEY}` },
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${RESEND_SECRET_KEY}`,
+              },
               body: JSON.stringify({
                 from: FROM_EMAIL,
                 to: [metadata.customer_email],
@@ -211,21 +238,28 @@ serve(async (req: Request) => {
                 html: guestHtml,
               }),
             }),
-            OWNER_EMAIL ? fetch("https://api.resend.com/emails", {
-              method: "POST",
-              headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_SECRET_KEY}` },
-              body: JSON.stringify({
-                from: FROM_EMAIL,
-                to: [OWNER_EMAIL],
-                subject: `Nuova prenotazione — ${metadata.customer_name} (${metadata.check_in} → ${metadata.check_out})`,
-                html: ownerHtml,
-              }),
-            }) : Promise.resolve(null),
+            OWNER_EMAIL
+              ? fetch("https://api.resend.com/emails", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${RESEND_SECRET_KEY}`,
+                  },
+                  body: JSON.stringify({
+                    from: FROM_EMAIL,
+                    to: [OWNER_EMAIL],
+                    subject: `Nuova prenotazione — ${metadata.customer_name} (${metadata.check_in} → ${metadata.check_out})`,
+                    html: ownerHtml,
+                  }),
+                })
+              : Promise.resolve(null),
           ]);
 
-          console.log(`[stripe-webhook] Guest email: ${guestRes.status}, Owner email: ${ownerRes?.status ?? "skipped"}`);
+          console.log(
+            `[stripe-webhook] Guest email: ${guestRes.status}, Owner email: ${ownerRes?.status ?? "skipped"}`
+          );
 
-          // 5. Marca email come inviate
+          // Marca email come inviate
           await supabase
             .from("bookings")
             .update({ email_sent: true })
@@ -234,6 +268,7 @@ serve(async (req: Request) => {
           console.log("[stripe-webhook] email_sent flag updated");
         }
 
+      // ── charge.refunded ────────────────────────────────────────────────────
       } else if (event.type === "charge.refunded") {
         const charge = event.data.object as Stripe.Charge;
         const paymentIntentId = charge.payment_intent as string;
@@ -249,8 +284,14 @@ serve(async (req: Request) => {
           return;
         }
 
-        await supabase.from("bookings").update({ payment_status: "refunded" }).eq("id", booking.id);
-        await supabase.from("blocked_dates").delete()
+        await supabase
+          .from("bookings")
+          .update({ payment_status: "refunded" })
+          .eq("id", booking.id);
+
+        await supabase
+          .from("blocked_dates")
+          .delete()
           .eq("room_id", booking.room_id)
           .eq("date_from", booking.check_in)
           .eq("date_to", booking.check_out)
@@ -260,30 +301,39 @@ serve(async (req: Request) => {
           await Promise.all([
             fetch("https://api.resend.com/emails", {
               method: "POST",
-              headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_SECRET_KEY}` },
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${RESEND_SECRET_KEY}`,
+              },
               body: JSON.stringify({
                 from: FROM_EMAIL,
                 to: [booking.customer_email],
                 subject: "Prenotazione cancellata — Corte del Borgo Antico",
-                html: `<div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto;">
-                  <h2>Prenotazione Cancellata</h2>
-                  <p>Gentile <strong>${booking.customer_name}</strong>,</p>
-                  <p>La tua prenotazione <strong>#${booking.id}</strong> per <strong>${booking.room_name}</strong> è stata cancellata e il rimborso di <strong>€${booking.total_price}</strong> è stato emesso.</p>
-                  <p>I tempi di accredito dipendono dal tuo istituto bancario (solitamente 5-10 giorni lavorativi).</p>
-                  <p>Speriamo di rivederti presto a Bari.<br><strong>Corte del Borgo Antico</strong></p>
-                </div>`,
+                html: `
+                  <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto;">
+                    <h2>Prenotazione Cancellata</h2>
+                    <p>Gentile <strong>${booking.customer_name}</strong>,</p>
+                    <p>La tua prenotazione <strong>#${booking.id}</strong> per <strong>${booking.room_name}</strong> è stata cancellata e il rimborso di <strong>€${booking.total_price}</strong> è stato emesso.</p>
+                    <p>I tempi di accredito dipendono dal tuo istituto bancario (solitamente 5-10 giorni lavorativi).</p>
+                    <p>Speriamo di rivederti presto a Bari.<br><strong>Corte del Borgo Antico</strong></p>
+                  </div>`,
               }),
             }),
-            OWNER_EMAIL ? fetch("https://api.resend.com/emails", {
-              method: "POST",
-              headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_SECRET_KEY}` },
-              body: JSON.stringify({
-                from: FROM_EMAIL,
-                to: [OWNER_EMAIL],
-                subject: `Rimborso emesso — ${booking.customer_name}`,
-                html: `<p>Rimborso di <strong>€${booking.total_price}</strong> emesso per la prenotazione #${booking.id} (${booking.customer_name}, ${booking.room_name}).</p>`,
-              }),
-            }) : Promise.resolve(null),
+            OWNER_EMAIL
+              ? fetch("https://api.resend.com/emails", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${RESEND_SECRET_KEY}`,
+                  },
+                  body: JSON.stringify({
+                    from: FROM_EMAIL,
+                    to: [OWNER_EMAIL],
+                    subject: `Rimborso emesso — ${booking.customer_name}`,
+                    html: `<p>Rimborso di <strong>€${booking.total_price}</strong> emesso per la prenotazione #${booking.id} (${booking.customer_name}, ${booking.room_name}).</p>`,
+                  }),
+                })
+              : Promise.resolve(null),
           ]);
           console.log("[stripe-webhook] Refund emails sent");
         }

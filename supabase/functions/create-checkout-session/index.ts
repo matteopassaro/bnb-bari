@@ -112,6 +112,7 @@ serve(async (req: Request) => {
     console.log(`[create-checkout-session] Stripe Session created: ${session.id}. Saving to Supabase...`);
 
     // 3. Insert pending booking
+    // FIX: solo parte critica
     const { error: insertError } = await supabaseClient.from("bookings").insert({
       room_id,
       room_name,
@@ -124,7 +125,7 @@ serve(async (req: Request) => {
       total_price: totalAmount,
       payment_status: "pending",
       stripe_session_id: session.id,
-      stripe_payment_intent_id: session.payment_intent as string | undefined,
+      stripe_payment_intent_id: session.payment_intent ?? null,
     });
 
     if (insertError) {

@@ -1,2 +1,17 @@
 [functions.stripe-webhook]
 verify_jwt = false
+
+[functions.admin-refund]
+verify_jwt = false
+
+[functions.sync-ical]
+verify_jwt = false
+
+[functions.smoobu-create-reservation]
+verify_jwt = false
+
+[functions.smoobu-sync-reservations]
+verify_jwt = false
+
+[functions.create-checkout-session]
+verify_jwt = false
