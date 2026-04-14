@@ -22,9 +22,13 @@
     "priceBreakdown_one": "€{{price}} × {{count}} notte",
     "priceBreakdown_other": "€{{price}} × {{count}} notti",
     "staySummary_one": "Soggiorno ({{count}} n.)",
-    "staySummary_other": "Soggiorno ({{count}} n.)"
+    "staySummary_other": "Soggiorno ({{count}} n.)",
+    "selectRoomFirst": "Seleziona prima una camera",
+    "selectCheckInFirst": "Seleziona prima la data di check-in",
+    "selectDates": "Seleziona le date"
   },
   "toasts": {
+    "selectRoomFirst": "Seleziona prima una camera",
     "requiredFields": "Compila tutti i campi obbligatori",
     "invalidDates": "Le date selezionate non sono valide",
     "datesJustBooked": "Spiacenti, le date selezionate sono state appena occupate.",

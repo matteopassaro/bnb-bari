@@ -33,6 +33,32 @@ serve(async (req: Request) => {
       language,
     } = await req.json();
 
+    // ── Validazione input di base ────────────────────────────────────────────
+    if (!room_id || !check_in || !check_out || !customer_name || !customer_email) {
+      return new Response(
+        JSON.stringify({ error: "Missing required fields" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Verifica che room_id sia un valore valido (non stringa vuota)
+    const validRoomIds = ["camera-tripla-deluxe", "camera-matrimoniale", "monolocale-pietra"];
+    if (!validRoomIds.includes(room_id)) {
+      console.warn(`[create-checkout-session] Invalid room_id: "${room_id}"`);
+      return new Response(
+        JSON.stringify({ error: "Invalid room selection" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Verifica che le date siano logicamente valide
+    if (new Date(check_out) <= new Date(check_in)) {
+      return new Response(
+        JSON.stringify({ error: "Check-out must be after check-in" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const checkoutLanguage =
       typeof language === "string" && language.trim() ? language : "en";
 
@@ -41,48 +67,63 @@ serve(async (req: Request) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // ── 1. Controlla disponibilità ──────────────────────────────────────────
-    // Controlla sia blocked_dates confermati (stripe, ical, manual)
-    // sia prenotazioni pending recenti (< 30 min) come protezione race condition
+    // ── 1a. Check blocked_dates (sovrapposizione corretta: AND, non OR) ──────
+    // La sovrapposizione tra [A,B) e [C,D) esiste se: A < D AND B > C
     const { data: existingBlocks, error: checkError } = await supabase
       .from("blocked_dates")
-      .select("*")
+      .select("id, date_from, date_to, source")
       .eq("room_id", room_id)
-      .or(`date_from.lte.${check_out},date_to.gte.${check_in}`);
+      .lt("date_from", check_out)   // block_start < new_check_out
+      .gt("date_to", check_in);     // block_end   > new_check_in
 
     if (checkError) throw checkError;
 
-    const isOverlap = (existingBlocks ?? []).some(
-      (block) =>
-        new Date(check_in) < new Date(block.date_to) &&
-        new Date(check_out) > new Date(block.date_from)
-    );
-
-    if (isOverlap) {
-      console.warn("[create-checkout-session] Date già occupate");
+    if ((existingBlocks ?? []).length > 0) {
+      console.warn(`[create-checkout-session] Dates blocked for room ${room_id}: ${check_in} → ${check_out}`);
       return new Response(
         JSON.stringify({ error: "Dates already booked" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Protezione race condition: controlla pending recenti (< 30 min) per stessa camera/date
-    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
-    const { data: recentPending } = await supabase
+    // ── 1b. Check prenotazioni già pagate (stessa logica AND) ────────────────
+    const { data: paidBookings, error: paidError } = await supabase
+      .from("bookings")
+      .select("id, check_in, check_out")
+      .eq("room_id", room_id)
+      .eq("payment_status", "paid")
+      .lt("check_in", check_out)   // paid_check_in < new_check_out
+      .gt("check_out", check_in);  // paid_check_out > new_check_in
+
+    if (paidError) throw paidError;
+
+    if ((paidBookings ?? []).length > 0) {
+      console.warn(`[create-checkout-session] Paid booking overlap for room ${room_id}: ${check_in} → ${check_out}`);
+      return new Response(
+        JSON.stringify({ error: "Dates already booked" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ── 1c. Protezione race condition: pending recenti (< 15 min) ────────────
+    // FIX: usa AND (catena .lt().gt()) invece di .or() che era sempre true
+    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+
+    const { data: recentPending, error: pendingError } = await supabase
       .from("bookings")
       .select("id")
       .eq("room_id", room_id)
       .eq("payment_status", "pending")
-      .gte("created_at", thirtyMinutesAgo)
-      .or(`check_in.lt.${check_out},check_out.gt.${check_in}`)
+      .gte("created_at", fifteenMinutesAgo)
+      .lt("check_in", check_out)   // AND semantics — overlap corretto
+      .gt("check_out", check_in)
       .limit(1);
 
-    const hasRecentPending = (recentPending ?? []).some(
-      () => true // se esiste almeno una prenotazione pending recente sovrapponente
-    );
-
-    if (hasRecentPending) {
-      console.warn("[create-checkout-session] Prenotazione in corso per queste date");
+    if (pendingError) {
+      // Non bloccare per errori non critici su questo check
+      console.warn("[create-checkout-session] Warning: pending check failed:", pendingError);
+    } else if ((recentPending ?? []).length > 0) {
+      console.warn(`[create-checkout-session] Recent pending booking overlap for room ${room_id}`);
       return new Response(
         JSON.stringify({ error: "Dates temporarily reserved. Please try again in a moment." }),
         { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -95,7 +136,6 @@ serve(async (req: Request) => {
     const totalAmount = price_per_night * nights;
 
     // ── 2. Crea booking pending PRIMA della sessione Stripe ──────────────────
-    // Questo previene sessioni Stripe orfane (se l'insert fallisce, non c'è sessione)
     const { data: newBooking, error: insertError } = await supabase
       .from("bookings")
       .insert({
@@ -114,6 +154,16 @@ serve(async (req: Request) => {
       .single();
 
     if (insertError || !newBooking) {
+      // Il DB EXCLUDE constraint può rigettare l'insert se c'è overlap simultaneo
+      // (race condition residua tra i check e l'insert — ultimo livello di difesa)
+      if (insertError?.code === "23P01") {
+        // exclusion_violation
+        console.warn("[create-checkout-session] DB exclusion constraint triggered for room", room_id);
+        return new Response(
+          JSON.stringify({ error: "Dates already booked" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
       console.error("[create-checkout-session] Insert booking error:", insertError);
       throw insertError ?? new Error("Failed to create booking");
     }
@@ -140,8 +190,10 @@ serve(async (req: Request) => {
       ],
       mode: "payment",
       customer_email: customer_email,
+      // Stripe session scade dopo 30 min — allineato al TTL pending (15 min + margine)
+      expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
       metadata: {
-        booking_id: newBooking.id, // usato dal webhook per trovare il booking
+        booking_id: newBooking.id,
         room_id,
         room_name,
         check_in,
@@ -168,12 +220,13 @@ serve(async (req: Request) => {
 
     if (updateError) {
       console.error("[create-checkout-session] Update stripe_session_id error:", updateError);
-      // Tenta di annullare la sessione Stripe per evitare sessioni orfane
       try {
         await stripe.checkout.sessions.expire(session.id);
       } catch (expireErr) {
         console.error("[create-checkout-session] Failed to expire Stripe session:", expireErr);
       }
+      // Rimuovi anche il booking pending orfano
+      await supabase.from("bookings").delete().eq("id", newBooking.id);
       throw updateError;
     }
 

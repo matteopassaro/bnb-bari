@@ -30,6 +30,7 @@
   "labels": {
     "checkIn": "Check-in",
     "checkOut": "Check-out",
+    "dates": "Dates",
     "guests": "Guests",
     "room": "Room",
     "duration": "Duration",

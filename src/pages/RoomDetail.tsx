@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { Navigate, Link, useParams } from "react-router-dom";
 import { 
   Wifi, Wind, Waves, Coffee, Tv, Users, Check, 
@@ -48,6 +48,40 @@ const RoomDetail = () => {
   const [isAmenitiesOpen, setIsAmenitiesOpen] = useState(false);
 
   const { blockedDates } = useAvailability(room.id);
+
+  const checkInRef = React.useRef<Date | undefined>(undefined);
+  const checkOutRef = React.useRef<Date | undefined>(undefined);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+
+  const handleDayClick = (date: Date | undefined) => {
+    if (!date) return;
+
+    const currentCheckIn = checkInRef.current;
+    const currentCheckOut = checkOutRef.current;
+
+    if (!currentCheckIn || (currentCheckIn && currentCheckOut)) {
+      setCheckIn(date);
+      setCheckOut(undefined);
+      checkInRef.current = date;
+      checkOutRef.current = undefined;
+    } else {
+      if (date.getTime() === currentCheckIn.getTime()) {
+        setCheckIn(date);
+        setCheckOut(undefined);
+        checkInRef.current = date;
+        checkOutRef.current = undefined;
+      } else {
+        setCheckOut(date);
+        checkOutRef.current = date;
+      }
+    }
+  };
+
+  const isDateBlocked = (d: Date) => {
+    const dayStart = new Date(d);
+    dayStart.setHours(0, 0, 0, 0);
+    return blockedDates.some(b => b.getTime() === dayStart.getTime());
+  };
 
   // Embla Carousel for mobile
   const [emblaRef] = useEmblaCarousel({ loop: true, align: 'start' });
@@ -326,33 +360,58 @@ const RoomDetail = () => {
                   </div>
 
                   <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <Label className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground">{t("common:labels.checkIn")}</Label>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button variant="outline" className={cn("w-full justify-start text-left font-normal py-6 px-4 rounded-xl", !checkIn && "text-muted-foreground")}>
-                              {checkIn ? format(checkIn, "dd/MM", { locale: dateLocale }) : t("common:labels.date")}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar mode="single" selected={checkIn} onSelect={setCheckIn} disabled={(d) => d < new Date()} blockedDates={blockedDates} locale={dateLocale} initialFocus />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground">{t("common:labels.checkOut")}</Label>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button variant="outline" className={cn("w-full justify-start text-left font-normal py-6 px-4 rounded-xl", !checkOut && "text-muted-foreground")}>
-                              {checkOut ? format(checkOut, "dd/MM", { locale: dateLocale }) : t("common:labels.date")}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar mode="single" selected={checkOut} onSelect={setCheckOut} disabled={(d) => d < (checkIn || new Date())} blockedDates={blockedDates} locale={dateLocale} initialFocus />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground">{t("common:labels.dates")}</Label>
+                      <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                        <PopoverTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            className={cn(
+                              "w-full justify-between font-normal py-5 px-4 rounded-xl",
+                              (!checkIn || !checkOut) && "text-muted-foreground"
+                            )}
+                          >
+                            <div className="flex items-center gap-2">
+                              {checkIn && checkOut ? (
+                                <span>
+                                  {format(checkIn, "dd MMM", { locale: dateLocale })} - {format(checkOut, "dd MMM yyyy", { locale: dateLocale })}
+                                  <span className="ml-2 text-sm text-muted-foreground">
+                                    ({nights} {nights === 1 ? "notte" : "notti"})
+                                  </span>
+                                </span>
+                              ) : checkIn ? (
+                                <span>{format(checkIn, "dd MMM yyyy", { locale: dateLocale })} - ...</span>
+                              ) : (
+                                <span>{t("common:labels.date")}</span>
+                              )}
+                            </div>
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0 md:p-2" align="start">
+                          <Calendar
+                            key={`room-${room.id}`}
+                            mode="single"
+                            selected={checkIn}
+                            onSelect={handleDayClick}
+                            disabled={(d) => d < new Date() || isDateBlocked(d)}
+                            modifiers={{
+                              range: (date) => {
+                                if (!checkIn || !checkOut) return false;
+                                return date > checkIn && date < checkOut;
+                              },
+                              "range-start": (date) => checkIn && date.getTime() === checkIn.getTime(),
+                              "range-end": (date) => checkOut && date.getTime() === checkOut.getTime(),
+                            }}
+                            modifiersClassNames={{
+                              range: "bg-[#0071c2]/20 text-[#0071c2] rounded-none",
+                              "range-start": "bg-[#0071c2] text-white rounded-l-md rounded-r-none",
+                              "range-end": "bg-[#0071c2] text-white rounded-r-md rounded-l-none",
+                            }}
+                            locale={dateLocale}
+                            className="pointer-events-auto"
+                          />
+                        </PopoverContent>
+                      </Popover>
                     </div>
 
                     <div className="space-y-3 pt-2">

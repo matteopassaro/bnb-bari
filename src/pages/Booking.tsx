@@ -1,7 +1,7 @@
-import { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { format, differenceInDays } from "date-fns";
-import { CalendarIcon, Users } from "lucide-react";
+import { CalendarIcon, Users, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -17,7 +17,7 @@ import { rooms } from "@/data/rooms";
 import { supabase } from "@/lib/supabase";
 import FadeIn from "@/components/FadeIn";
 
-import { useAvailability } from "@/hooks/useAvailability";
+import { useAvailability, useRoomsAvailability } from "@/hooks/useAvailability";
 import { useTranslation } from "react-i18next";
 import { getDateLocale } from "@/i18n/config";
 
@@ -39,8 +39,26 @@ const Booking = () => {
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   const { blockedDates } = useAvailability(selectedRoom);
+  const { availableRooms, isLoading: isCheckingAvailability } = useRoomsAvailability(checkIn, checkOut);
+
+  const handleRoomChange = (newRoomId: string) => {
+    setSelectedRoom(newRoomId);
+    if (selectedRoom && newRoomId !== selectedRoom) {
+      setCheckIn(undefined);
+      setCheckOut(undefined);
+    }
+  };
+
+  useEffect(() => {
+    if (checkIn && checkOut && selectedRoom && !availableRooms.has(selectedRoom) && !isCheckingAvailability) {
+      setSelectedRoom("");
+    }
+  }, [availableRooms, checkIn, checkOut, isCheckingAvailability, selectedRoom]);
+
+  const roomIsSelected = selectedRoom !== "";
 
   const nights = useMemo(() => {
     if (checkIn && checkOut) return differenceInDays(checkOut, checkIn);
@@ -51,14 +69,56 @@ const Booking = () => {
   const total = selectedRoomData ? selectedRoomData.price * nights : 0;
   const selectedRoomName = selectedRoomData ? t(`home:roomsData.${selectedRoomData.id}.name`) : "";
 
+  const checkInRef = React.useRef<Date | undefined>(undefined);
+  const checkOutRef = React.useRef<Date | undefined>(undefined);
+
+  const handleDayClick = (date: Date | undefined) => {
+    if (!date) return;
+
+    const currentCheckIn = checkInRef.current;
+    const currentCheckOut = checkOutRef.current;
+
+    if (!currentCheckIn || (currentCheckIn && currentCheckOut)) {
+      setCheckIn(date);
+      setCheckOut(undefined);
+      checkInRef.current = date;
+      checkOutRef.current = undefined;
+    } else {
+      if (date.getTime() === currentCheckIn.getTime()) {
+        setCheckIn(date);
+        setCheckOut(undefined);
+        checkInRef.current = date;
+        checkOutRef.current = undefined;
+      } else {
+        setCheckOut(date);
+        checkOutRef.current = date;
+      }
+    }
+  };
+
+  const isDateBlocked = (d: Date) => {
+    const dayStart = new Date(d);
+    dayStart.setHours(0, 0, 0, 0);
+    return blockedDates.some(b => b.getTime() === dayStart.getTime());
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!checkIn || !checkOut || !selectedRoom || !name || !email) {
+
+    if (!selectedRoom) {
+      toast.error(t("booking:toasts.selectRoomFirst", { defaultValue: "Seleziona prima una camera" }));
+      return;
+    }
+    if (!checkIn || !checkOut) {
       toast.error(t("booking:toasts.requiredFields"));
       return;
     }
     if (nights <= 0) {
       toast.error(t("booking:toasts.invalidDates"));
+      return;
+    }
+    if (!name || !email) {
+      toast.error(t("booking:toasts.requiredFields"));
       return;
     }
 
@@ -87,9 +147,11 @@ const Booking = () => {
       const { session_url, error: edgeError } = data || {};
       if (edgeError) {
         if (edgeError === "Dates already booked") {
-           toast.error(t("booking:toasts.datesJustBooked"));
+          toast.error(t("booking:toasts.datesJustBooked"));
+        } else if (edgeError.includes("temporarily reserved")) {
+          toast.error(t("booking:toasts.datesJustBooked"));
         } else {
-           throw new Error(edgeError);
+          throw new Error(edgeError);
         }
         return;
       }
@@ -107,92 +169,143 @@ const Booking = () => {
     }
   };
 
-
   return (
     <div className="min-h-screen">
       <Navbar />
-      <div className="pt-24 pb-20 overflow-hidden">
-        <div className="container mx-auto px-4 max-w-4xl">
-          <div className="text-center mb-12">
+      <div className="pt-20 md:pt-24 pb-16 md:pb-20 overflow-hidden">
+        <div className="container mx-auto px-3 md:px-4 max-w-4xl">
+          <div className="text-center mb-8 md:mb-12">
             <FadeIn direction="up">
-              <p className="text-primary text-sm uppercase tracking-[0.2em] font-sans font-medium mb-3">
+              <p className="text-primary text-xs md:text-sm uppercase tracking-[0.2em] font-sans font-medium mb-2 md:mb-3">
                 {t("booking:page.eyebrow")}
               </p>
-              <h1 className="text-3xl md:text-5xl font-serif font-bold text-foreground">
+              <h1 className="text-2xl md:text-3xl lg:text-5xl font-serif font-bold text-foreground">
                 {t("booking:page.title")}
               </h1>
             </FadeIn>
           </div>
 
-          <form onSubmit={handleSubmit} className="grid lg:grid-cols-5 gap-8">
-            {/* Form */}
+          <form onSubmit={handleSubmit} className="grid lg:grid-cols-5 gap-6 md:gap-8">
             <div className="lg:col-span-3 space-y-6">
               <FadeIn direction="right" delay={0.1}>
-                <div className="bg-card rounded-2xl border p-6 space-y-5">
-                  <h2 className="font-serif text-lg font-bold text-card-foreground">{t("booking:page.dateAndRoom")}</h2>
+                <div className="bg-card rounded-2xl border p-4 md:p-6 space-y-4 md:space-y-5">
+                  <h2 className="font-serif text-base md:text-lg font-bold text-card-foreground">{t("booking:page.dateAndRoom")}</h2>
 
-                  <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="grid sm:grid-cols-2 gap-3 md:gap-4">
                     <div className="space-y-2">
-                      <Label>{t("common:labels.checkIn")} *</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !checkIn && "text-muted-foreground")}>
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {checkIn ? format(checkIn, "d MMM yyyy", { locale: dateLocale }) : t("common:labels.selectDate")}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar mode="single" selected={checkIn} onSelect={setCheckIn} disabled={(d) => d < new Date()} blockedDates={blockedDates} locale={dateLocale} initialFocus className="p-3 pointer-events-auto" />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>{t("common:labels.checkOut")} *</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !checkOut && "text-muted-foreground")}>
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {checkOut ? format(checkOut, "d MMM yyyy", { locale: dateLocale }) : t("common:labels.selectDate")}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar mode="single" selected={checkOut} onSelect={setCheckOut} disabled={(d) => d < (checkIn || new Date())} blockedDates={blockedDates} locale={dateLocale} initialFocus className="p-3 pointer-events-auto" />
-                        </PopoverContent>
-                      </Popover>
+                      <Label>{t("common:labels.room")} *</Label>
+                      <Select value={selectedRoom} onValueChange={handleRoomChange}>
+                        <SelectTrigger><SelectValue placeholder={t("booking:placeholders.selectRoom")} /></SelectTrigger>
+                        <SelectContent>
+                          {rooms.map((r) => {
+                            const isAvailable = availableRooms.has(r.id);
+                            return (
+                              <SelectItem 
+                                key={r.id} 
+                                value={r.id}
+                                disabled={checkIn && checkOut && !isAvailable}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span>{t(`home:roomsData.${r.id}.name`)}</span>
+                                  {checkIn && checkOut && !isAvailable && (
+                                    <span className="text-xs text-muted-foreground ml-2">(non disponibile)</span>
+                                  )}
+                                </div>
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>{t("common:labels.room")} *</Label>
-                      <Select value={selectedRoom} onValueChange={setSelectedRoom}>
-                        <SelectTrigger><SelectValue placeholder={t("booking:placeholders.selectRoom")} /></SelectTrigger>
-                        <SelectContent>
-                          {rooms.map((r) => (
-                            <SelectItem key={r.id} value={r.id}>{t("booking:messages.roomOption", { roomName: t(`home:roomsData.${r.id}.name`), price: r.price })}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                  {isCheckingAvailability && checkIn && checkOut && (
+                    <div className="text-sm text-muted-foreground flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      Controllo disponibilità...
                     </div>
-                    <div className="space-y-2">
-                      <Label>{t("common:labels.guests")}</Label>
-                      <Select value={guests} onValueChange={setGuests}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {[1, 2, 3, 4].map((n) => (
-                            <SelectItem key={n} value={n.toString()}>{t("common:counts.guests", { count: n })}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                  )}
+
+                  {checkIn && checkOut && !isCheckingAvailability && availableRooms.size === 0 && (
+                    <div className="flex items-center gap-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                      <AlertCircle className="h-4 w-4 shrink-0" />
+                      <span>Nessuna camera disponibile per le date selezionate</span>
                     </div>
+                  )}
+
+                  {!roomIsSelected && (
+                    <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                      <AlertCircle className="h-4 w-4 shrink-0" />
+                      <span>
+                        {t("booking:messages.selectRoomFirst", {
+                          defaultValue: "Seleziona prima una camera per vedere le date disponibili"
+                        })}
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label>{t("common:labels.dates")} *</Label>
+                    <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          disabled={!roomIsSelected}
+                          className={cn(
+                            "w-full justify-between font-normal h-auto py-2.5 md:py-3 px-3 md:px-4 text-sm md:text-base",
+                            !roomIsSelected && "text-muted-foreground"
+                          )}
+                        >
+                          <div className="flex items-center gap-2">
+                            <CalendarIcon className="h-4 w-4 text-[#0071c2] shrink-0" />
+                            {checkIn && checkOut ? (
+                              <span className="truncate">
+                                {format(checkIn, "d MMM", { locale: dateLocale })} - {format(checkOut, "d MMM yyyy", { locale: dateLocale })}
+                                <span className="ml-1 md:ml-2 text-xs md:text-sm text-muted-foreground">
+                                  ({nights} {nights === 1 ? "notte" : "notti"})
+                                </span>
+                              </span>
+                            ) : checkIn ? (
+                              <span className="truncate">{format(checkIn, "d MMM yyyy", { locale: dateLocale })} - ...</span>
+                            ) : (
+                              <span>{t("booking:messages.selectDates", { defaultValue: "Seleziona le date" })}</span>
+                            )}
+                          </div>
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 md:p-2" align="start">
+                        <Calendar
+                          key={`range-${selectedRoom}`}
+                          mode="single"
+                          selected={checkIn}
+                          onSelect={handleDayClick}
+                          disabled={(d) => d < new Date() || isDateBlocked(d)}
+                          modifiers={{
+                            range: (date) => {
+                              if (!checkIn || !checkOut) return false;
+                              return date > checkIn && date < checkOut;
+                            },
+                            "range-start": (date) => checkIn && date.getTime() === checkIn.getTime(),
+                            "range-end": (date) => checkOut && date.getTime() === checkOut.getTime(),
+                          }}
+                          modifiersClassNames={{
+                            range: "bg-[#0071c2]/20 text-[#0071c2] rounded-none",
+                            "range-start": "bg-[#0071c2] text-white rounded-l-md rounded-r-none",
+                            "range-end": "bg-[#0071c2] text-white rounded-r-md rounded-l-none",
+                          }}
+                          locale={dateLocale}
+                          className="pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </div>
                 </div>
               </FadeIn>
 
               <FadeIn direction="right" delay={0.2}>
-                <div className="bg-card rounded-2xl border p-6 space-y-5">
-                  <h2 className="font-serif text-lg font-bold text-card-foreground">{t("booking:page.yourDetails")}</h2>
-                  <div className="grid sm:grid-cols-2 gap-4">
+                <div className="bg-card rounded-2xl border p-4 md:p-6 space-y-4 md:space-y-5">
+                  <h2 className="font-serif text-base md:text-lg font-bold text-card-foreground">{t("booking:page.yourDetails")}</h2>
+                  <div className="grid sm:grid-cols-2 gap-3 md:gap-4">
                     <div className="space-y-2">
                       <Label>{t("common:labels.fullName")} *</Label>
                       <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("booking:placeholders.fullNameExample")} required />
@@ -214,19 +327,18 @@ const Booking = () => {
               </FadeIn>
             </div>
 
-            {/* Summary */}
             <div className="lg:col-span-2">
               <FadeIn direction="left" delay={0.3}>
-                <div className="bg-card rounded-2xl border p-6 sticky top-24 space-y-5">
+                <div className="bg-card rounded-2xl border p-4 md:p-6 sticky top-24 space-y-4 md:space-y-5">
                   <h2 className="font-serif text-lg font-bold text-card-foreground">{t("booking:page.summary")}</h2>
 
                   {selectedRoomData && (
                     <div className="rounded-xl overflow-hidden">
-                      <img src={selectedRoomData.images[0]} alt={selectedRoomName} className="w-full h-36 object-cover" loading="lazy" />
+                      <img src={selectedRoomData.images[0]} alt={selectedRoomName} className="w-full h-28 md:h-36 object-cover" loading="lazy" />
                     </div>
                   )}
 
-                  <div className="space-y-3 text-sm">
+                  <div className="space-y-2 md:space-y-3 text-sm">
                     {selectedRoomData && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">{t("common:labels.room")}</span>
@@ -259,13 +371,13 @@ const Booking = () => {
 
                   {nights > 0 && selectedRoomData && (
                     <>
-                      <div className="border-t pt-4">
+                      <div className="border-t pt-3 md:pt-4">
                         <div className="flex justify-between text-sm mb-1">
                           <span className="text-muted-foreground">{t("booking:messages.priceBreakdown", { price: selectedRoomData.price, count: nights })}</span>
                           <span className="font-medium text-card-foreground">€{total}</span>
                         </div>
                       </div>
-                      <div className="border-t pt-4 flex justify-between text-lg font-bold">
+                      <div className="border-t pt-3 md:pt-4 flex justify-between text-base md:text-lg font-bold">
                         <span className="text-card-foreground">{t("common:labels.total")}</span>
                         <span className="text-primary">€{total}</span>
                       </div>

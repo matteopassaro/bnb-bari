@@ -20,22 +20,21 @@ type SmoobuReservation = {
   type: string;
   arrival: string;
   departure: string;
-  firstName: string;
-  lastName: string;
+  firstname: string;
+  lastname: string;
   email: string;
   phone: string;
   adults: number;
   price: number;
-  apartmentId: number;
-  channelId: number;
   apartment: { id: number; name: string };
   channel: { id: number; name: string };
 };
 
 type SmoobuResponse = {
-  data: SmoobuReservation[];
-  total_pages: number;
+  bookings: SmoobuReservation[];
+  page_count: number;
   page: number;
+  total_items: number;
 };
 
 async function smoobuGet(endpoint: string): Promise<unknown> {
@@ -52,6 +51,12 @@ async function smoobuGet(endpoint: string): Promise<unknown> {
   });
 
   const data = await res.json();
+  
+  // Log full response for debugging
+  console.log(`[smoobu-sync-reservations] API Response status: ${res.status}`);
+  console.log(`[smoobu-sync-reservations] API Response keys: ${Object.keys(data).join(", ")}`);
+  console.log(`[smoobu-sync-reservations] API Response:`, JSON.stringify(data).substring(0, 500));
+
   if (!res.ok) throw new Error(`Smoobu API ${res.status}: ${JSON.stringify(data)}`);
   return data;
 }
@@ -69,9 +74,8 @@ serve(async (req: Request) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // 1. Fetcha prenotazioni da Smoobu con paginazione
-    // Prende solo prenotazioni da oggi in avanti
-    const today = new Date().toISOString().split("T")[0];
+    // 1. Fetcha TUTTE le prenotazioni da Smoobu con paginazione
+    // Rimuoviamo arrivalFrom per prendere tutte le prenotazioni (incluse quelle passate)
     let page = 1;
     const pageSize = 100;
     let allReservations: SmoobuReservation[] = [];
@@ -79,17 +83,17 @@ serve(async (req: Request) => {
 
     while (hasMore) {
       const response = await smoobuGet(
-        `/reservations?pageSize=${pageSize}&page=${page}&arrivalFrom=${today}`
+        `/reservations?pageSize=${pageSize}&page=${page}`
       ) as SmoobuResponse;
 
-      const reservations = response.data ?? [];
+      const reservations = response.bookings ?? [];
       allReservations = [...allReservations, ...reservations];
 
       console.log(
-        `[smoobu-sync-reservations] Pagina ${page}/${response.total_pages}: ${reservations.length} prenotazioni`
+        `[smoobu-sync-reservations] Pagina ${page}/${response.page_count}: ${reservations.length} prenotazioni`
       );
 
-      if (page >= response.total_pages || reservations.length < pageSize) {
+      if (page >= response.page_count || reservations.length < pageSize) {
         hasMore = false;
       } else {
         page++;
@@ -101,14 +105,24 @@ serve(async (req: Request) => {
     );
 
     // 2. Filtra solo prenotazioni esterne
-    // Esclude: type "blocked" (blocchi manuali già gestiti da noi) e channelId 9999963 (prenotazioni dirette nostre)
+    // Esclude:
+    // - type "blocked" (blocchi manuali già gestiti da noi)
+    // - channel "Website" (prenotazioni create dal nostro sito - sono già in "stripe")
     const externalReservations = allReservations.filter(
-      (r) => r.type !== "blocked" && r.channelId !== 9999963
+      (r) => r.type !== "blocked" && r.channel?.name !== "Website"
     );
 
-    console.log(
-      `[smoobu-sync-reservations] Prenotazioni esterne (Booking.com ecc.): ${externalReservations.length}`
-    );
+    // Log dettagliato per debug
+    console.log(`[smoobu-sync-reservations] Filtering details:`);
+    console.log(`  - Total fetched: ${allReservations.length}`);
+    console.log(`  - Blocked type excluded: ${allReservations.filter(r => r.type === "blocked").length}`);
+    console.log(`  - Website channel excluded: ${allReservations.filter(r => r.channel?.name === "Website").length}`);
+    console.log(`  - External kept: ${externalReservations.length}`);
+    
+    // Log each reservation for debugging
+    externalReservations.forEach((r, i) => {
+      console.log(`  [${i+1}] ID:${r.id} type:${r.type} channel:${r.channel?.name} arrival:${r.arrival} departure:${r.departure} apartment:${r.apartment?.id}`);
+    });
 
     // 3. Aggiorna blocked_dates — elimina vecchie righe ical e reinserisce
     // NON tocca source: stripe e source: manual
@@ -122,10 +136,11 @@ serve(async (req: Request) => {
     if (externalReservations.length > 0) {
       const rows = externalReservations
         .map((r) => {
-          const roomId = SMOOBU_TO_ROOM_MAP[r.apartmentId];
+          // Use r.apartment.id (not r.apartmentId) based on actual Smoobu API response
+          const roomId = SMOOBU_TO_ROOM_MAP[r.apartment?.id];
           if (!roomId) {
             console.warn(
-              `[smoobu-sync-reservations] apartmentId ${r.apartmentId} non in mappa, skip`
+              `[smoobu-sync-reservations] apartment.id ${r.apartment?.id} non in mappa, skip`
             );
             return null;
           }
@@ -134,8 +149,6 @@ serve(async (req: Request) => {
             date_from: r.arrival,
             date_to: r.departure,
             source: "ical",
-            // Campo opzionale per debug — aggiungi colonna "note text" a blocked_dates se vuoi usarlo
-            // note: `${r.channel?.name ?? "Canale sconosciuto"} — ${r.firstName} ${r.lastName}`,
           };
         })
         .filter((r): r is NonNullable<typeof r> => r !== null);
@@ -152,11 +165,11 @@ serve(async (req: Request) => {
     // 4. Formatta i dati per l'admin panel (vista prenotazioni esterne)
     const formattedForAdmin = externalReservations.map((r) => ({
       smoobu_id: r.id,
-      room_id: SMOOBU_TO_ROOM_MAP[r.apartmentId] ?? `unknown-${r.apartmentId}`,
+      room_id: SMOOBU_TO_ROOM_MAP[r.apartment?.id] ?? `unknown-${r.apartment?.id}`,
       room_name: r.apartment?.name ?? "Camera sconosciuta",
       check_in: r.arrival,
       check_out: r.departure,
-      guest_name: `${r.firstName} ${r.lastName}`.trim(),
+      guest_name: `${r.firstname} ${r.lastname}`.trim(),
       guest_email: r.email,
       guest_phone: r.phone,
       guests: r.adults,

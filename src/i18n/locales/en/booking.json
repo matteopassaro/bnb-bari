@@ -22,9 +22,13 @@
     "priceBreakdown_one": "€{{price}} × {{count}} night",
     "priceBreakdown_other": "€{{price}} × {{count}} nights",
     "staySummary_one": "Stay ({{count}} night)",
-    "staySummary_other": "Stay ({{count}} nights)"
+    "staySummary_other": "Stay ({{count}} nights)",
+    "selectRoomFirst": "Please select a room first",
+    "selectCheckInFirst": "Please select check-in date first",
+    "selectDates": "Select dates"
   },
   "toasts": {
+    "selectRoomFirst": "Please select a room first",
     "requiredFields": "Please fill in all required fields",
     "invalidDates": "The selected dates are not valid",
     "datesJustBooked": "Sorry, the selected dates have just been booked.",
